@@ -3,13 +3,17 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Trophy, Users, LogOut, LogIn } from 'lucide-react'
+import { Trophy, Users, LogOut, LogIn, UserCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from './Logo'
 
 const NAV_ITEMS = [
   { href: '/ranking', label: '랭킹', icon: Trophy },
   { href: '/friends', label: '친구', icon: Users },
+]
+
+const AUTH_NAV_ITEMS = [
+  { href: '/mypage', label: '마이페이지', icon: UserCircle },
 ]
 
 export default function Navbar() {
@@ -49,11 +53,25 @@ export default function Navbar() {
           ))}
 
           {user ? (
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
-              <span className="text-sm font-bold text-gray-800">{user.nickname}</span>
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+              {AUTH_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                    pathname.startsWith(href)
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                  )}
+                >
+                  <Icon size={15} />
+                  {label}
+                </Link>
+              ))}
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1"
                 title="로그아웃"
               >
                 <LogOut size={15} />
