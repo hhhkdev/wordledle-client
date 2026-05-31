@@ -38,7 +38,11 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!user || games.length === 0) return
+    if (!user) {
+      setResults({})
+      return
+    }
+    if (games.length === 0) return
     async function fetchTodayResults() {
       const supabase = createClient()
       const { data } = await supabase
