@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Plus, Edit3, XCircle, Flame, Clock, Brain } from 'lucide-react'
+import { CheckCircle2, Plus, Edit3, XCircle, Flame, Clock, Brain, ExternalLink } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import ResultModal from './ResultModal'
@@ -109,15 +109,6 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           </div>
         )}
 
-        {/* 전체 카드를 게임 링크로 */}
-        <Link
-          href={game.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute inset-0 z-0"
-          aria-label={`${game.name} 게임하기`}
-        />
-
         {/* 콘텐츠 */}
         <div className="relative z-10 flex flex-col flex-1 p-3.5 gap-1.5">
           {/* 이모지 + 타이틀 */}
@@ -134,21 +125,38 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
           {!hasImage && <div className="flex-1 min-h-3" />}
 
-          {/* 결과 입력 버튼 */}
-          {user && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); setModalOpen(true) }}
+          {/* 버튼 영역 */}
+          <div className={cn('flex gap-1.5 mt-1', user ? '' : '')}>
+            {/* 게임 이동 버튼 */}
+            <Link
+              href={game.url}
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(
-                'relative z-20 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold transition-colors mt-1',
-                hasResult
-                  ? 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm'
-                  : 'bg-white text-gray-900 hover:bg-white/90'
+                'flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold transition-colors bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm',
+                user ? 'w-9 shrink-0' : 'flex-1'
               )}
             >
-              {hasResult ? <Edit3 size={12} /> : <Plus size={12} />}
-              {hasResult ? '결과 수정' : '결과 입력'}
-            </button>
-          )}
+              <ExternalLink size={13} />
+              {!user && <span>게임하기</span>}
+            </Link>
+
+            {/* 결과 입력 버튼 */}
+            {user && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-colors',
+                  hasResult
+                    ? 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm'
+                    : 'bg-white text-gray-900 hover:bg-white/90'
+                )}
+              >
+                {hasResult ? <Edit3 size={12} /> : <Plus size={12} />}
+                {hasResult ? '결과 수정' : '결과 입력'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
