@@ -177,9 +177,9 @@ export default function HomePage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className={cn('text-2xl font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
-                      {e.totalScore}
+                      {e.totalScore}<span className={cn('text-sm font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점</span>
                     </p>
-                    <p className={cn('text-xs font-semibold', isMe ? 'text-blue-400' : 'text-gray-400')}>점</p>
+                    <p className={cn('text-xs mt-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>{e.completedCount}/{totalGames} 완료</p>
                   </div>
                 </div>
               )
