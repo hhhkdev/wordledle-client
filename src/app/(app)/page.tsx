@@ -7,7 +7,7 @@ import { Game, GameResult, User } from '@/types'
 import GameCard from '@/components/game/GameCard'
 import Announcements from '@/components/Announcements'
 import Link from 'next/link'
-import { LogIn, Trophy, ChevronRight, CheckCircle2, XCircle, Minus } from 'lucide-react'
+import { LogIn, Trophy, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface RankingEntry {
@@ -15,6 +15,8 @@ interface RankingEntry {
   completedCount: number
   totalScore: number
 }
+
+const RANK_MEDAL = ['🥇', '🥈', '🥉']
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
@@ -55,7 +57,7 @@ export default function HomePage() {
       const supabase = createClient()
       const { data } = await supabase
         .from('results')
-        .select('user_id, score, completed, user:users(id, nickname, created_at)')
+        .select('user_id, score, completed, user:users(id, nickname, created_at, is_admin)')
         .eq('date', today)
       if (!data) return
       const map = new Map<string, RankingEntry>()
@@ -71,7 +73,7 @@ export default function HomePage() {
         .sort((a, b) => b.completedCount !== a.completedCount
           ? b.completedCount - a.completedCount
           : b.totalScore - a.totalScore)
-        .slice(0, 3)
+        .slice(0, 5)
       setTopRanking(sorted)
     }
     fetchTopRanking()
@@ -80,65 +82,49 @@ export default function HomePage() {
   const todayStr = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
   const completedCount = Object.values(results).filter(r => r.completed).length
   const totalGames = games.length
-  const RANK_MEDAL = ['🥇', '🥈', '🥉']
 
   return (
     <div>
-      {/* Hero */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-sm font-semibold text-gray-400 mb-1">{todayStr}</p>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
-              오늘의 워들
-            </h1>
-          </div>
-          {user && totalGames > 0 && (
-            <Link
-              href="/ranking"
-              className="flex flex-col items-center gap-0.5 bg-white rounded-2xl px-4 py-2.5 border border-gray-200 hover:border-gray-300 transition-colors shadow-sm"
-            >
-              <div className="flex items-end gap-0.5 leading-none">
-                <span className="text-xl sm:text-2xl font-black text-gray-900">{completedCount}</span>
-                <span className="text-base font-bold text-gray-300 mb-0.5">/{totalGames}</span>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-gray-400">
-                <Trophy size={10} />완료
-              </div>
-            </Link>
-          )}
-        </div>
-
-        {!authLoading && !user && (
-          <div className="mt-3 flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800">결과를 기록하고 친구들과 경쟁해보세요</p>
-              <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">로그인하면 랭킹과 친구 기능을 이용할 수 있어요</p>
-            </div>
-            <Link href="/login" className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
-              <LogIn size={14} />
-              <span className="hidden sm:inline">로그인</span>
-            </Link>
-          </div>
-        )}
-
-        {user && totalGames > 0 && completedCount === totalGames && (
-          <div className="mt-3 flex items-center gap-2 bg-green-50 border border-green-200 rounded-2xl p-3">
-            <span className="text-lg">🎉</span>
-            <p className="text-sm font-bold text-green-800">오늘 모든 게임을 완료했어요!</p>
-          </div>
+      {/* 날짜 + 완료 현황 */}
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-sm font-semibold text-gray-400">{todayStr}</p>
+        {user && totalGames > 0 && (
+          <span className="text-sm font-bold text-gray-500">
+            <span className="text-gray-900">{completedCount}</span>/{totalGames} 완료
+          </span>
         )}
       </div>
 
-      {/* Game grid: 2열 고정 (모바일 포함), 카드는 aspect-4/3 */}
+      {/* 로그인 유도 */}
+      {!authLoading && !user && (
+        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 mb-5 shadow-sm">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-800">결과를 기록하고 친구들과 경쟁해보세요</p>
+            <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">로그인하면 랭킹과 친구 기능을 이용할 수 있어요</p>
+          </div>
+          <Link href="/login" className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
+            <LogIn size={14} />
+            <span className="hidden sm:inline">로그인</span>
+          </Link>
+        </div>
+      )}
+
+      {user && totalGames > 0 && completedCount === totalGames && (
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-2xl p-3 mb-5">
+          <span className="text-lg">🎉</span>
+          <p className="text-sm font-bold text-green-800">오늘 모든 게임을 완료했어요!</p>
+        </div>
+      )}
+
+      {/* Game grid: 모바일 1열, sm 이상 2열 */}
       {loadingGames ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="aspect-4/3 rounded-2xl bg-gray-200 animate-pulse" />
+            <div key={i} className="h-40 rounded-2xl bg-gray-200 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {games.map(game => (
             <GameCard
               key={game.id}
@@ -150,105 +136,78 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 하단 섹션 */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* 오늘의 랭킹 — 전체 너비 */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <Trophy size={18} className="text-yellow-500" />
+            오늘의 랭킹
+          </h2>
+          <Link href="/ranking" className="flex items-center gap-0.5 text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors">
+            전체보기 <ChevronRight size={14} />
+          </Link>
+        </div>
 
-        {/* 오늘의 랭킹 미리보기 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-black text-gray-900 flex items-center gap-1.5">
-              <Trophy size={14} className="text-yellow-500" />
-              오늘의 랭킹
-            </h2>
-            <Link href="/ranking" className="flex items-center gap-0.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors">
-              전체보기 <ChevronRight size={13} />
-            </Link>
+        {topRanking.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 py-10 text-center text-gray-300 text-sm">
+            아직 오늘의 결과가 없어요
           </div>
-          {topRanking.length === 0 ? (
-            <div className="text-center py-5 text-gray-300 text-sm">아직 결과가 없어요</div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {topRanking.map((entry, idx) => (
+        ) : (
+          <div className="flex flex-col gap-2">
+            {/* 1등 강조 카드 */}
+            {topRanking[0] && (() => {
+              const e = topRanking[0]
+              const isMe = e.user.id === user?.id
+              return (
+                <div className={cn(
+                  'flex items-center gap-4 px-5 py-4 rounded-2xl border-2',
+                  isMe ? 'bg-blue-50 border-blue-300' : 'bg-yellow-50 border-yellow-300'
+                )}>
+                  <span className="text-3xl">🥇</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn('text-lg font-black truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
+                      {e.user.nickname}
+                      {isMe && <span className="ml-1.5 text-sm text-blue-400 font-normal">나</span>}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {e.completedCount}/{totalGames} 완료 · {e.totalScore}점
+                    </p>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* 2~5등 */}
+            {topRanking.slice(1).map((entry, idx) => {
+              const rank = idx + 2
+              const isMe = entry.user.id === user?.id
+              return (
                 <div
                   key={entry.user.id}
                   className={cn(
-                    'flex items-center gap-2.5 px-3 py-2 rounded-xl border',
-                    entry.user.id === user?.id ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-transparent'
+                    'flex items-center gap-3 px-4 py-2.5 rounded-2xl border',
+                    isMe ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
                   )}
                 >
-                  <span className="text-base w-5 text-center">{RANK_MEDAL[idx]}</span>
-                  <span className={cn('flex-1 text-sm font-bold truncate', entry.user.id === user?.id ? 'text-blue-800' : 'text-gray-800')}>
-                    {entry.user.nickname}
-                    {entry.user.id === user?.id && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
+                  <span className="text-lg w-6 text-center">
+                    {rank <= 3 ? RANK_MEDAL[rank - 1] : <span className="text-sm font-bold text-gray-400">{rank}</span>}
                   </span>
-                  <span className={cn('text-xs font-semibold shrink-0', entry.user.id === user?.id ? 'text-blue-500' : 'text-gray-400')}>
+                  <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-800')}>
+                    {entry.user.nickname}
+                    {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
+                  </span>
+                  <span className={cn('text-xs font-semibold shrink-0', isMe ? 'text-blue-500' : 'text-gray-400')}>
                     {entry.completedCount}/{totalGames} · {entry.totalScore}점
                   </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 내 현황 / 로그인 유도 */}
-        {user ? (
-          <MyTodayStatus games={games} results={results} />
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 flex flex-col items-center justify-center gap-2 text-center">
-            <p className="text-2xl">📊</p>
-            <p className="text-sm font-bold text-gray-700">나의 기록을 확인하세요</p>
-            <p className="text-xs text-gray-400">로그인하면 게임별 통계와 연속 완료 기록을 볼 수 있어요</p>
-            <Link href="/login" className="mt-1 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
-              로그인하기
-            </Link>
+              )
+            })}
           </div>
         )}
       </div>
 
       {/* 공지사항 */}
       <Announcements />
-    </div>
-  )
-}
-
-function MyTodayStatus({ games, results }: { games: Game[]; results: Record<string, GameResult> }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-black text-gray-900">오늘 내 현황</h2>
-        <Link href="/mypage" className="flex items-center gap-0.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors">
-          전체기록 <ChevronRight size={13} />
-        </Link>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        {games.map(game => {
-          const r = results[game.id]
-          return (
-            <div key={game.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50">
-              <span className="text-base w-5 text-center">{game.emoji}</span>
-              <span className="flex-1 text-sm font-semibold text-gray-700 truncate">{game.name}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {r ? (
-                  r.completed ? (
-                    <>
-                      {r.attempts !== null && (
-                        <span className="text-xs text-gray-400">
-                          {r.attempts}{r.max_attempts ? `/${r.max_attempts}` : ''}회
-                        </span>
-                      )}
-                      <CheckCircle2 size={14} className="text-green-500" />
-                    </>
-                  ) : (
-                    <XCircle size={14} className="text-red-400" />
-                  )
-                ) : (
-                  <Minus size={14} className="text-gray-300" />
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
     </div>
   )
 }
