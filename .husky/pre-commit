@@ -1,0 +1,1 @@
+pnpm tsc --noEmit --project tsconfig.json || (echo "TypeScript 오류가 있습니다. 커밋 전 수정해주세요." && exit 1)
