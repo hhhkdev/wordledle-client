@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink, CheckCircle2, Plus, Edit3, XCircle, Flame, Clock, Brain } from 'lucide-react'
+import { CheckCircle2, Plus, Edit3, XCircle, Flame, Clock, Brain } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import ResultModal from './ResultModal'
@@ -65,23 +65,23 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
   const hasResult = !!result
   const completed = result?.completed
+  const hasImage = !!game.image_url
 
   return (
     <>
       {/*
-       * 카드 비율: aspect-[4/3] — 가로:세로 = 4:3
-       * 배경 이미지 권장: 800×600px (4:3, 2x 레티나 기준)
-       * 안전 영역: 이미지 상단 40% (하단 60%는 콘텐츠 오버레이로 가려짐)
-       * 로고/브랜딩은 이미지 상단 중앙에 배치 권장
+       * 이미지 없을 때: 콤팩트 카드 (고정 비율 없음)
+       * 이미지 있을 때: aspect-4/3 (800×600px 권장, 안전영역 상단 40%)
        */}
-      <div
-        className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 aspect-4/3"
-      >
-        {/* 배경: 이미지 or 단색 */}
-        {game.image_url ? (
+      <div className={cn(
+        'relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 group',
+        hasImage && 'aspect-4/3'
+      )}>
+        {/* 배경 */}
+        {hasImage ? (
           <>
             <img
-              src={game.image_url}
+              src={game.image_url!}
               alt={game.name}
               className="absolute inset-0 w-full h-full object-cover"
               draggable={false}
@@ -90,81 +90,65 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           </>
         ) : (
           <>
-            {/* 색상 기반 그라디언트 배경 */}
             <div
               className="absolute inset-0"
-              style={{
-                background: `linear-gradient(145deg, ${game.color} 0%, ${game.color}bb 100%)`,
-              }}
+              style={{ background: `linear-gradient(145deg, ${game.color} 0%, ${game.color}bb 100%)` }}
             />
-            {/* 대각선 하이라이트 */}
             <div className="absolute inset-0 bg-linear-to-br from-white/20 via-transparent to-black/25" />
           </>
         )}
 
         {/* 완료 뱃지 */}
         {hasResult && (
-          <div className="absolute top-2 right-2 z-10">
+          <div className="absolute top-2.5 right-2.5 z-10">
             {completed ? (
-              <div className="flex items-center gap-0.5 bg-white/25 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                <CheckCircle2 size={11} className="text-white" />
-                <span className="text-xs font-bold text-white">완료</span>
-              </div>
+              <CheckCircle2 size={18} className="text-white drop-shadow" />
             ) : (
-              <div className="flex items-center gap-0.5 bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                <XCircle size={11} className="text-white/80" />
-                <span className="text-xs font-semibold text-white/80">실패</span>
-              </div>
+              <XCircle size={18} className="text-white/70 drop-shadow" />
             )}
           </div>
         )}
 
-        {/* 콘텐츠 */}
-        <div className="relative z-10 flex flex-col flex-1 p-3 sm:p-4 gap-1">
-          {/* 상단: 이모지 */}
-          <div className="text-2xl sm:text-3xl leading-none">{game.emoji}</div>
+        {/* 전체 카드를 게임 링크로 */}
+        <Link
+          href={game.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 z-0"
+          aria-label={`${game.name} 게임하기`}
+        />
 
-          {/* 게임명 + 설명 */}
-          <div className="mt-0.5">
-            <h3 className="text-sm sm:text-base font-black text-white leading-tight tracking-tight">
-              {game.name}
-            </h3>
-            <p className="text-xs text-white/70 font-medium mt-0.5 line-clamp-1">{game.description}</p>
+        {/* 콘텐츠 */}
+        <div className="relative z-10 flex flex-col flex-1 p-3.5 gap-1.5">
+          {/* 이모지 + 타이틀 */}
+          <div className="flex items-center gap-2">
+            <span className={cn('leading-none', hasImage ? 'text-2xl' : 'text-xl')}>{game.emoji}</span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-white leading-tight truncate">{game.name}</h3>
+              <p className="text-xs text-white/65 mt-0.5 truncate">{game.description}</p>
+            </div>
           </div>
 
           {/* 결과 stats */}
           {hasResult && result && <ResultStats game={game} result={result} />}
 
-          <div className="flex-1" />
+          {!hasImage && <div className="flex-1 min-h-3" />}
 
-          {/* 버튼 영역 */}
-          <div className="flex items-center gap-1.5">
-            <Link
-              href={game.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-colors"
+          {/* 결과 입력 버튼 */}
+          {user && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); setModalOpen(true) }}
+              className={cn(
+                'relative z-20 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-bold transition-colors mt-1',
+                hasResult
+                  ? 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm'
+                  : 'bg-white text-gray-900 hover:bg-white/90'
+              )}
             >
-              <ExternalLink size={12} />
-              <span className="hidden xs:inline">게임하기</span>
-              <span className="xs:hidden">이동</span>
-            </Link>
-
-            {user && (
-              <button
-                onClick={() => setModalOpen(true)}
-                className={cn(
-                  'flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors',
-                  hasResult
-                    ? 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm'
-                    : 'bg-white text-gray-900 hover:bg-white/90'
-                )}
-              >
-                {hasResult ? <Edit3 size={12} /> : <Plus size={12} />}
-                <span className="hidden sm:inline">{hasResult ? '수정' : '결과 입력'}</span>
-              </button>
-            )}
-          </div>
+              {hasResult ? <Edit3 size={12} /> : <Plus size={12} />}
+              {hasResult ? '결과 수정' : '결과 입력'}
+            </button>
+          )}
         </div>
       </div>
 

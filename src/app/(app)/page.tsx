@@ -172,16 +172,16 @@ export default function HomePage() {
                 <div
                   key={entry.user.id}
                   className={cn(
-                    'flex items-center gap-2.5 px-3 py-2 rounded-xl',
-                    entry.user.id === user?.id ? 'bg-gray-900' : 'bg-gray-50'
+                    'flex items-center gap-2.5 px-3 py-2 rounded-xl border',
+                    entry.user.id === user?.id ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-transparent'
                   )}
                 >
                   <span className="text-base w-5 text-center">{RANK_MEDAL[idx]}</span>
-                  <span className={cn('flex-1 text-sm font-bold truncate', entry.user.id === user?.id ? 'text-white' : 'text-gray-800')}>
+                  <span className={cn('flex-1 text-sm font-bold truncate', entry.user.id === user?.id ? 'text-blue-800' : 'text-gray-800')}>
                     {entry.user.nickname}
-                    {entry.user.id === user?.id && <span className="ml-1 text-xs text-white/50 font-normal">나</span>}
+                    {entry.user.id === user?.id && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
                   </span>
-                  <span className={cn('text-xs font-semibold shrink-0', entry.user.id === user?.id ? 'text-white/60' : 'text-gray-400')}>
+                  <span className={cn('text-xs font-semibold shrink-0', entry.user.id === user?.id ? 'text-blue-500' : 'text-gray-400')}>
                     {entry.completedCount}/{totalGames} · {entry.totalScore}점
                   </span>
                 </div>

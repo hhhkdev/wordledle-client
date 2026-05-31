@@ -105,7 +105,7 @@ export default function FriendsPage() {
   if (authLoading || !user) return null
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-black text-gray-900 tracking-tight">친구</h1>
         <p className="text-sm text-gray-500 mt-1">친구를 추가하면 친구 랭킹을 볼 수 있어요.</p>

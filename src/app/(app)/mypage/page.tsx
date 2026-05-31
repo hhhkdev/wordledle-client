@@ -166,7 +166,7 @@ export default function MyPage() {
   if (authLoading || !user) return null
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       {/* 프로필 헤더 */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
         <div className="flex items-center justify-between">
@@ -236,13 +236,11 @@ export default function MyPage() {
             {gameStats.map(stat => (
               <div
                 key={stat.game.id}
-                className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
+                className="bg-white rounded-2xl border border-gray-200 p-4"
               >
-                <div className="h-1" style={{ backgroundColor: stat.game.color }} />
-                <div className="p-4">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className="text-lg">{stat.game.emoji}</span>
-                    <span className="text-sm font-bold text-gray-800">{stat.game.name}</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">{stat.game.emoji}</span>
+                    <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <StatItem label="완료" value={`${stat.totalCompleted}회`} />
@@ -259,7 +257,6 @@ export default function MyPage() {
                       value={stat.currentStreak > 0 ? `🔥${stat.currentStreak}일` : '-'}
                     />
                   </div>
-                </div>
               </div>
             ))}
           </div>
