@@ -173,9 +173,13 @@ export default function HomePage() {
                       {e.user.nickname}
                       {isMe && <span className="ml-1.5 text-sm text-blue-400 font-normal">나</span>}
                     </p>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                      {e.completedCount}/{totalGames} 완료 · {e.totalScore}점
+                    <p className="text-xs text-gray-400 mt-0.5">{e.completedCount}/{totalGames} 완료</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={cn('text-2xl font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
+                      {e.totalScore}
                     </p>
+                    <p className={cn('text-xs font-semibold', isMe ? 'text-blue-400' : 'text-gray-400')}>점</p>
                   </div>
                 </div>
               )
@@ -200,9 +204,14 @@ export default function HomePage() {
                     {entry.user.nickname}
                     {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
                   </span>
-                  <span className={cn('text-xs font-semibold shrink-0', isMe ? 'text-blue-500' : 'text-gray-400')}>
-                    {entry.completedCount}/{totalGames} · {entry.totalScore}점
-                  </span>
+                  <div className="text-right shrink-0">
+                    <p className={cn('text-base font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
+                      {entry.totalScore}<span className={cn('text-xs font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점</span>
+                    </p>
+                    <p className={cn('text-xs', isMe ? 'text-blue-400' : 'text-gray-400')}>
+                      {entry.completedCount}/{totalGames}
+                    </p>
+                  </div>
                 </div>
               )
             })}

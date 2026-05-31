@@ -107,23 +107,15 @@ export default function RankingTable({ entries, currentUserId, isKkomanttle }: R
                   )}
                 </>
               ) : (
-                <>
-                  <div className="text-right">
-                    <p className={cn('text-xs font-medium', isMe ? 'text-blue-400' : 'text-gray-400')}>완료</p>
-                    <p className={cn('text-sm font-black', isMe ? 'text-blue-800' : 'text-gray-900')}>
-                      {entry.completedCount}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    'px-3 py-1.5 rounded-xl text-right',
-                    isMe ? 'bg-blue-100' : 'bg-gray-50'
-                  )}>
-                    <p className={cn('text-xs font-medium', isMe ? 'text-blue-400' : 'text-gray-400')}>점수</p>
-                    <p className={cn('text-sm font-black', isMe ? 'text-blue-800' : 'text-gray-900')}>
-                      {entry.totalScore}
-                    </p>
-                  </div>
-                </>
+                <div className="text-right shrink-0">
+                  <p className={cn('text-xl font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
+                    {entry.totalScore}
+                    <span className={cn('text-xs font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점</span>
+                  </p>
+                  <p className={cn('text-xs mt-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>
+                    {entry.completedCount}회 완료
+                  </p>
+                </div>
               )}
             </div>
           </div>
