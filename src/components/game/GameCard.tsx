@@ -90,9 +90,15 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           </>
         ) : (
           <>
-            <div className="absolute inset-0" style={{ backgroundColor: game.color }} />
-            <div className="absolute inset-0 bg-black/15" />
-            <div className="absolute inset-x-0 top-0 h-1/3 bg-white/10" />
+            {/* 색상 기반 그라디언트 배경 */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(145deg, ${game.color} 0%, ${game.color}bb 100%)`,
+              }}
+            />
+            {/* 대각선 하이라이트 */}
+            <div className="absolute inset-0 bg-linear-to-br from-white/20 via-transparent to-black/25" />
           </>
         )}
 
