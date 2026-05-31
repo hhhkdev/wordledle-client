@@ -26,38 +26,33 @@ function formatTime(seconds: number): string {
 function ResultStats({ game, result }: { game: Game; result: GameResult }) {
   const meta = result.metadata
 
-  // 꼬맨틀: 추측 횟수 + 시간 + 유사도
   if (game.slug === 'kkomanttle') {
     return (
-      <div className="flex flex-wrap gap-1.5 mt-1">
+      <div className="flex flex-wrap gap-1 mt-1">
         {result.attempts !== null && (
-          <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1 text-sm font-bold text-white">
-            <Brain size={12} />
-            {result.attempts}회
+          <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-md px-2 py-0.5 text-xs font-bold text-white">
+            <Brain size={10} />{result.attempts}회
           </span>
         )}
-        {meta?.time_seconds !== null && meta?.time_seconds !== undefined && (
-          <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1 text-sm font-bold text-white">
-            <Clock size={12} />
-            {formatTime(meta.time_seconds)}
+        {meta?.time_seconds != null && (
+          <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-md px-2 py-0.5 text-xs font-bold text-white">
+            <Clock size={10} />{formatTime(meta.time_seconds!)}
           </span>
         )}
       </div>
     )
   }
 
-  // Wordle-style: 시도 횟수 + 스트릭(꼬들 전용)
   return (
-    <div className="flex items-center gap-1.5 mt-1">
+    <div className="flex items-center gap-1 mt-1">
       {result.attempts !== null && (
-        <span className="bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1 text-sm font-bold text-white">
+        <span className="bg-white/20 backdrop-blur-sm rounded-md px-2 py-0.5 text-xs font-bold text-white">
           {result.attempts}{result.max_attempts ? `/${result.max_attempts}` : ''}번
         </span>
       )}
       {game.slug === 'kkodle' && meta?.streak != null && (
-        <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-lg px-2.5 py-1 text-sm font-bold text-white">
-          <Flame size={12} />
-          {meta.streak}일
+        <span className="flex items-center gap-0.5 bg-white/20 backdrop-blur-sm rounded-md px-2 py-0.5 text-xs font-bold text-white">
+          <Flame size={10} />{meta.streak}일
         </span>
       )}
     </div>
@@ -73,69 +68,94 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
   return (
     <>
+      {/*
+       * 카드 비율: aspect-[4/3] — 가로:세로 = 4:3
+       * 배경 이미지 권장: 800×600px (4:3, 2x 레티나 기준)
+       * 안전 영역: 이미지 상단 40% (하단 60%는 콘텐츠 오버레이로 가려짐)
+       * 로고/브랜딩은 이미지 상단 중앙에 배치 권장
+       */}
       <div
-        className="relative group flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-1"
-        style={{ minHeight: 200 }}
+        className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 aspect-4/3"
       >
-        <div className="absolute inset-0" style={{ backgroundColor: game.color }} />
-        <div className="absolute inset-0 bg-black/15" />
-        <div className="absolute inset-x-0 top-0 h-1/3 bg-white/10 rounded-t-2xl" />
+        {/* 배경: 이미지 or 단색 */}
+        {game.image_url ? (
+          <>
+            <img
+              src={game.image_url}
+              alt={game.name}
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+            />
+            <div className="absolute inset-0 bg-black/45" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ backgroundColor: game.color }} />
+            <div className="absolute inset-0 bg-black/15" />
+            <div className="absolute inset-x-0 top-0 h-1/3 bg-white/10" />
+          </>
+        )}
 
+        {/* 완료 뱃지 */}
         {hasResult && (
-          <div className="absolute top-3 right-3 z-10">
+          <div className="absolute top-2 right-2 z-10">
             {completed ? (
-              <div className="flex items-center gap-1 bg-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                <CheckCircle2 size={13} className="text-white" />
+              <div className="flex items-center gap-0.5 bg-white/25 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                <CheckCircle2 size={11} className="text-white" />
                 <span className="text-xs font-bold text-white">완료</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 bg-black/25 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                <XCircle size={13} className="text-white/80" />
+              <div className="flex items-center gap-0.5 bg-black/30 backdrop-blur-sm px-2 py-0.5 rounded-full">
+                <XCircle size={11} className="text-white/80" />
                 <span className="text-xs font-semibold text-white/80">실패</span>
               </div>
             )}
           </div>
         )}
 
-        <div className="relative z-10 flex flex-col flex-1 p-5 gap-2">
-          <div className="text-4xl leading-none mb-1">{game.emoji}</div>
+        {/* 콘텐츠 */}
+        <div className="relative z-10 flex flex-col flex-1 p-3 sm:p-4 gap-1">
+          {/* 상단: 이모지 */}
+          <div className="text-2xl sm:text-3xl leading-none">{game.emoji}</div>
 
-          <div>
-            <h3 className="text-xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
+          {/* 게임명 + 설명 */}
+          <div className="mt-0.5">
+            <h3 className="text-sm sm:text-base font-black text-white leading-tight tracking-tight">
               {game.name}
             </h3>
-            <p className="text-sm text-white/75 font-medium mt-0.5">{game.description}</p>
+            <p className="text-xs text-white/70 font-medium mt-0.5 line-clamp-1">{game.description}</p>
           </div>
 
-          {hasResult && result && (
-            <ResultStats game={game} result={result} />
-          )}
+          {/* 결과 stats */}
+          {hasResult && result && <ResultStats game={game} result={result} />}
 
           <div className="flex-1" />
 
-          <div className="flex items-center gap-2 pt-2">
+          {/* 버튼 영역 */}
+          <div className="flex items-center gap-1.5">
             <Link
               href={game.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-colors"
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-colors"
             >
-              <ExternalLink size={14} />
-              게임하기
+              <ExternalLink size={12} />
+              <span className="hidden xs:inline">게임하기</span>
+              <span className="xs:hidden">이동</span>
             </Link>
 
             {user && (
               <button
                 onClick={() => setModalOpen(true)}
                 className={cn(
-                  'flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-colors',
+                  'flex items-center justify-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors',
                   hasResult
                     ? 'bg-white/15 hover:bg-white/25 text-white backdrop-blur-sm'
                     : 'bg-white text-gray-900 hover:bg-white/90'
                 )}
               >
-                {hasResult ? <Edit3 size={14} /> : <Plus size={14} />}
-                {hasResult ? '수정' : '결과 입력'}
+                {hasResult ? <Edit3 size={12} /> : <Plus size={12} />}
+                <span className="hidden sm:inline">{hasResult ? '수정' : '결과 입력'}</span>
               </button>
             )}
           </div>

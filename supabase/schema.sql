@@ -19,6 +19,9 @@ create table if not exists public.games (
   emoji text,
   color text,
   result_format text,
+  -- 카드 배경 이미지 URL (권장 크기: 800×500px, 16:10 비율)
+  -- 안전 영역: 이미지 상단 40% (하단은 콘텐츠 오버레이로 가려짐)
+  image_url text,
   created_at timestamptz default now()
 );
 
@@ -33,7 +36,6 @@ create table if not exists public.results (
   attempts integer,
   max_attempts integer,
   completed boolean default false,
-  -- Game-specific extra data (streak, time_seconds, max_similarity, puzzle_number, etc.)
   metadata jsonb default '{}',
   created_at timestamptz default now(),
   unique(user_id, game_id, date)
@@ -49,45 +51,46 @@ create table if not exists public.friends (
   check (user_id != friend_id)
 );
 
--- ── Add metadata column if upgrading from older schema ──────────────────────
--- (safe to run even if column already exists)
+-- ── 기존 스키마 업그레이드 (idempotent) ────────────────────────
 alter table public.results add column if not exists metadata jsonb default '{}';
+alter table public.games   add column if not exists image_url text;
 
--- ── Games seed ──────────────────────────────────────────────────────────────
--- Delete old games first to allow clean re-seed
+-- ── Games seed ──────────────────────────────────────────────────
 delete from public.games;
 
-insert into public.games (name, slug, url, description, emoji, color, result_format)
+insert into public.games (name, slug, url, description, emoji, color, result_format, image_url)
 values
   (
     'Wordle', 'wordle',
     'https://www.nytimes.com/games/wordle/index.html',
     '5글자 영단어 맞추기', '🟩', '#538d4e',
-    'Wordle 1,806 4/6'
+    'Wordle 1,806 4/6',
+    null
   ),
   (
     '꼬들', 'kkodle',
     'https://kordle.kr',
     '한국어 6글자 단어 맞추기', '🟧', '#e07c3a',
-    '꼬들 1610 5/6 Kordle.Kr 🔥3'
+    '꼬들 1610 5/6 Kordle.Kr 🔥3',
+    null
   ),
   (
     '꼬오오오오들', 'kkooooodle',
     'https://koooo.kordle.kr',
     '한국어 12글자 단어 맞추기', '🟥', '#c0392b',
-    '꼬오오오오들 1310 5/6'
+    '꼬오오오오들 1310 5/6',
+    null
   ),
   (
     '꼬맨틀', 'kkomanttle',
     'https://semantle-ko.newsjel.ly',
     '단어 유사도로 정답 찾기', '🧠', '#8e44ad',
-    'N번째 꼬맨틀을 풀었습니다!'
+    'N번째 꼬맨틀을 풀었습니다!',
+    null
   );
 
--- ── Row Level Security ──────────────────────────────────────────────────────
--- NOTE: RLS disabled — using custom auth (not Supabase Auth).
--- For production, integrate Supabase Auth and re-enable RLS with proper policies.
-alter table public.users disable row level security;
-alter table public.games disable row level security;
-alter table public.results disable row level security;
-alter table public.friends disable row level security;
+-- ── Row Level Security ──────────────────────────────────────────
+alter table public.users    disable row level security;
+alter table public.games    disable row level security;
+alter table public.results  disable row level security;
+alter table public.friends  disable row level security;

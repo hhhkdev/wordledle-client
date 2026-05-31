@@ -55,8 +55,40 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+## 게임 카드 배경 이미지 가이드
+
+게임별 배경 이미지는 Supabase `games.image_url` 컬럼에 URL을 저장하면 자동으로 적용됩니다.
+
+| 항목 | 권장값 |
+|------|--------|
+| **비율** | 4:3 (가로형) |
+| **권장 크기** | 800×600px (2x 레티나 대응) |
+| **최소 크기** | 400×300px |
+| **포맷** | WebP 또는 JPEG |
+| **안전 영역** | 이미지 **상단 40%** — 하단 60%는 콘텐츠 오버레이로 가려짐 |
+| **로고 배치** | 상단 중앙 권장 |
+
+카드 렌더링 크기 참고:
+- 모바일(375px 기준): 카드 너비 ~170px
+- 데스크탑(1280px): 카드 너비 ~600px
+- 모든 화면에서 `object-fit: cover`로 중앙 크롭
+
+## 공지사항 추가 방법
+
+`src/components/Announcements.tsx` 파일 상단의 `ANNOUNCEMENTS` 배열에 추가합니다:
+
+```ts
+{
+  date: 'YYYY-MM-DD',
+  tag: '업데이트' | '공지' | '이벤트' | '점검',
+  title: '제목',
+  content: '내용',
+}
+```
+
 ## 주의사항
 
 - 패키지 매니저는 **pnpm** — `npm install` 대신 `pnpm install` 사용
 - `.env.local`에 실제 Supabase 키를 입력해야 앱이 동작함
 - 현재 RLS 비활성화 — 운영 시 Supabase Auth 연동 필요
+- Supabase 스키마 변경 후 `supabase/schema.sql` 전체를 SQL Editor에서 재실행

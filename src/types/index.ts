@@ -13,6 +13,8 @@ export interface Game {
   emoji: string
   color: string
   result_format: string
+  /** 카드 배경 이미지 URL. 권장: 800×500px (16:10). 안전 영역: 상단 40% */
+  image_url?: string | null
   created_at: string
 }
 

@@ -226,13 +226,13 @@ export default function MyPage() {
       <section className="mb-5">
         <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
         {loading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-32 rounded-2xl bg-gray-200 animate-pulse" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {gameStats.map(stat => (
               <div
                 key={stat.game.id}

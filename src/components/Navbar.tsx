@@ -30,60 +30,61 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/60">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        <Link href="/" className="hover:opacity-75 transition-opacity">
+      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
+        <Link href="/" className="hover:opacity-75 transition-opacity shrink-0">
           <Logo size="sm" />
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors',
                 pathname.startsWith(href)
                   ? 'bg-gray-100 text-gray-900'
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
               )}
             >
-              <Icon size={15} />
-              {label}
+              <Icon size={16} />
+              <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
 
           {user ? (
-            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+            <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-gray-200">
               {AUTH_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   href={href}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors',
                     pathname.startsWith(href)
                       ? 'bg-gray-100 text-gray-900'
                       : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
                   )}
                 >
-                  <Icon size={15} />
-                  {label}
+                  <Icon size={16} />
+                  <span className="hidden sm:inline">{label}</span>
                 </Link>
               ))}
               <button
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-1"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="로그아웃"
               >
-                <LogOut size={15} />
+                <LogOut size={16} />
               </button>
             </div>
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 ml-2 px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-1.5 ml-1 px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-gray-700 transition-colors"
             >
               <LogIn size={14} />
-              로그인
+              <span className="hidden xs:inline">로그인</span>
+              <span className="xs:hidden sr-only">로그인</span>
             </Link>
           )}
         </nav>
