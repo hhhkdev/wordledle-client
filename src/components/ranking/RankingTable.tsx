@@ -8,20 +8,27 @@ interface RankingEntry {
   results: GameResult[]
   totalScore: number
   completedCount: number
+  primaryStat: number | null
 }
 
 interface RankingTableProps {
   entries: RankingEntry[]
   currentUserId?: string
+  isKkomanttle?: boolean
 }
 
-const RANK_STYLES = [
-  { bg: 'bg-yellow-400', text: 'text-yellow-900', label: '🥇' },
-  { bg: 'bg-gray-300', text: 'text-gray-700', label: '🥈' },
-  { bg: 'bg-amber-500', text: 'text-amber-900', label: '🥉' },
-]
+const RANK_MEDAL = ['🥇', '🥈', '🥉']
 
-export default function RankingTable({ entries, currentUserId }: RankingTableProps) {
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}분 ${s}초`
+  return `${s}초`
+}
+
+export default function RankingTable({ entries, currentUserId, isKkomanttle }: RankingTableProps) {
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -37,7 +44,8 @@ export default function RankingTable({ entries, currentUserId }: RankingTablePro
       {entries.map((entry, idx) => {
         const isMe = entry.user.id === currentUserId
         const rank = idx + 1
-        const rankStyle = RANK_STYLES[idx]
+        const result = entry.results[0]
+        const meta = result?.metadata as { time_seconds?: number; streak?: number } | null
 
         return (
           <div
@@ -49,10 +57,10 @@ export default function RankingTable({ entries, currentUserId }: RankingTablePro
                 : 'bg-white border-gray-200 hover:border-gray-300'
             )}
           >
-            {/* Rank badge */}
+            {/* Rank */}
             <div className="w-8 shrink-0 flex items-center justify-center">
-              {rankStyle ? (
-                <span className="text-xl leading-none">{rankStyle.label}</span>
+              {rank <= 3 ? (
+                <span className="text-xl leading-none">{RANK_MEDAL[rank - 1]}</span>
               ) : (
                 <span className={cn(
                   'text-sm font-black w-7 h-7 flex items-center justify-center rounded-full',
@@ -71,7 +79,7 @@ export default function RankingTable({ entries, currentUserId }: RankingTablePro
               )}>
                 {entry.user.nickname}
                 {isMe && (
-                  <span className={cn('ml-1.5 text-xs font-semibold', isMe ? 'text-white/50' : 'text-gray-400')}>
+                  <span className={cn('ml-1.5 text-xs font-normal', isMe ? 'text-white/40' : 'text-gray-400')}>
                     나
                   </span>
                 )}
@@ -80,21 +88,47 @@ export default function RankingTable({ entries, currentUserId }: RankingTablePro
 
             {/* Stats */}
             <div className="flex items-center gap-3 shrink-0">
-              <div className="text-right">
-                <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>완료</p>
-                <p className={cn('text-sm font-black', isMe ? 'text-white' : 'text-gray-900')}>
-                  {entry.completedCount}
-                </p>
-              </div>
-              <div className={cn(
-                'px-3 py-1.5 rounded-xl text-right',
-                isMe ? 'bg-white/15' : 'bg-gray-50'
-              )}>
-                <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>점수</p>
-                <p className={cn('text-sm font-black', isMe ? 'text-white' : 'text-gray-900')}>
-                  {entry.totalScore}
-                </p>
-              </div>
+              {isKkomanttle ? (
+                // 꼬맨틀 전용: 시도 횟수 + 소요 시간
+                <>
+                  <div className="text-right">
+                    <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>추측</p>
+                    <p className={cn('text-sm font-black', isMe ? 'text-white' : 'text-gray-900')}>
+                      {result?.attempts ?? '-'}회
+                    </p>
+                  </div>
+                  {meta?.time_seconds != null && (
+                    <div className={cn(
+                      'px-3 py-1.5 rounded-xl text-right',
+                      isMe ? 'bg-white/15' : 'bg-gray-50'
+                    )}>
+                      <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>시간</p>
+                      <p className={cn('text-sm font-black tabular-nums', isMe ? 'text-white' : 'text-gray-900')}>
+                        {formatTime(meta.time_seconds)}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                // 일반 게임: 완료 수 + 점수
+                <>
+                  <div className="text-right">
+                    <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>완료</p>
+                    <p className={cn('text-sm font-black', isMe ? 'text-white' : 'text-gray-900')}>
+                      {entry.completedCount}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    'px-3 py-1.5 rounded-xl text-right',
+                    isMe ? 'bg-white/15' : 'bg-gray-50'
+                  )}>
+                    <p className={cn('text-xs font-medium', isMe ? 'text-white/50' : 'text-gray-400')}>점수</p>
+                    <p className={cn('text-sm font-black', isMe ? 'text-white' : 'text-gray-900')}>
+                      {entry.totalScore}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )

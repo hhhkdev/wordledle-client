@@ -15,6 +15,44 @@ interface RankingEntry {
   results: GameResult[]
   totalScore: number
   completedCount: number
+  primaryStat: number | null  // game-specific: attempts for kkomanttle, score otherwise
+}
+
+function buildEntries(resultsData: (GameResult & { user: User })[]) {
+  const entriesMap = new Map<string, RankingEntry>()
+  for (const r of resultsData) {
+    const u = r.user
+    if (!u) continue
+    if (!entriesMap.has(u.id)) {
+      entriesMap.set(u.id, { user: u, results: [], totalScore: 0, completedCount: 0, primaryStat: null })
+    }
+    const entry = entriesMap.get(u.id)!
+    entry.results.push(r)
+    entry.totalScore += r.score ?? 0
+    if (r.completed) entry.completedCount++
+  }
+  return entriesMap
+}
+
+function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null) {
+  // 꼬맨틀 단독 선택 시: 시도 횟수 오름차순 (적을수록 잘한 것)
+  if (selectedGameSlug === 'kkomanttle') {
+    return [...entries].sort((a, b) => {
+      const aAttempts = a.results[0]?.attempts ?? Infinity
+      const bAttempts = b.results[0]?.attempts ?? Infinity
+      if (aAttempts !== bAttempts) return aAttempts - bAttempts
+      // 동점 시 소요 시간 오름차순
+      const aTime = (a.results[0]?.metadata as { time_seconds?: number })?.time_seconds ?? Infinity
+      const bTime = (b.results[0]?.metadata as { time_seconds?: number })?.time_seconds ?? Infinity
+      return aTime - bTime
+    })
+  }
+  // 나머지: 완료 수 내림차순 → 점수 내림차순
+  return [...entries].sort((a, b) =>
+    b.completedCount !== a.completedCount
+      ? b.completedCount - a.completedCount
+      : b.totalScore - a.totalScore
+  )
 }
 
 export default function RankingPage() {
@@ -32,37 +70,18 @@ export default function RankingPage() {
     async function load() {
       const supabase = createClient()
 
-      // Load games
       const { data: gamesData } = await supabase.from('games').select('*').order('name')
       if (gamesData) setGames(gamesData as Game[])
 
-      // Load today's global results with user info
       const { data: resultsData } = await supabase
         .from('results')
         .select('*, user:users(id, nickname, created_at)')
         .eq('date', today)
 
       if (resultsData) {
-        const entriesMap = new Map<string, RankingEntry>()
-        for (const r of resultsData) {
-          const u = r.user as User
-          if (!u) continue
-          if (!entriesMap.has(u.id)) {
-            entriesMap.set(u.id, { user: u, results: [], totalScore: 0, completedCount: 0 })
-          }
-          const entry = entriesMap.get(u.id)!
-          entry.results.push(r as GameResult)
-          entry.totalScore += r.score ?? 0
-          if (r.completed) entry.completedCount++
-        }
-        const sorted = Array.from(entriesMap.values()).sort((a, b) =>
-          b.completedCount !== a.completedCount
-            ? b.completedCount - a.completedCount
-            : b.totalScore - a.totalScore
-        )
-        setGlobalEntries(sorted)
+        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        setGlobalEntries(sortEntries(Array.from(entriesMap.values()), null))
       }
-
       setLoading(false)
     }
     load()
@@ -89,62 +108,48 @@ export default function RankingPage() {
         .in('user_id', allIds)
 
       if (resultsData) {
-        const entriesMap = new Map<string, RankingEntry>()
-        for (const r of resultsData) {
-          const u = r.user as User
-          if (!u) continue
-          if (!entriesMap.has(u.id)) {
-            entriesMap.set(u.id, { user: u, results: [], totalScore: 0, completedCount: 0 })
-          }
-          const entry = entriesMap.get(u.id)!
-          entry.results.push(r as GameResult)
-          entry.totalScore += r.score ?? 0
-          if (r.completed) entry.completedCount++
-        }
-        const sorted = Array.from(entriesMap.values()).sort((a, b) =>
-          b.completedCount !== a.completedCount
-            ? b.completedCount - a.completedCount
-            : b.totalScore - a.totalScore
-        )
-        setFriendEntries(sorted)
+        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        setFriendEntries(sortEntries(Array.from(entriesMap.values()), null))
       }
     }
     loadFriends()
   }, [user, today])
 
+  const selectedGameObj = games.find(g => g.id === selectedGame)
+  const selectedGameSlug = selectedGameObj?.slug ?? null
+
   function filterByGame(entries: RankingEntry[]): RankingEntry[] {
-    if (selectedGame === 'all') return entries
-    return entries
+    if (selectedGame === 'all') return sortEntries(entries, null)
+
+    const filtered = entries
       .map(e => {
-        const filtered = e.results.filter(r => r.game_id === selectedGame)
-        const totalScore = filtered.reduce((sum, r) => sum + (r.score ?? 0), 0)
-        const completedCount = filtered.filter(r => r.completed).length
-        return { ...e, results: filtered, totalScore, completedCount }
+        const gameResults = e.results.filter(r => r.game_id === selectedGame)
+        const totalScore = gameResults.reduce((sum, r) => sum + (r.score ?? 0), 0)
+        const completedCount = gameResults.filter(r => r.completed).length
+        return { ...e, results: gameResults, totalScore, completedCount }
       })
       .filter(e => e.results.length > 0)
-      .sort((a, b) =>
-        b.completedCount !== a.completedCount
-          ? b.completedCount - a.completedCount
-          : b.totalScore - a.totalScore
-      )
+
+    return sortEntries(filtered, selectedGameSlug)
   }
 
   const displayedDate = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
   const shownEntries = tab === 'global' ? filterByGame(globalEntries) : filterByGame(friendEntries)
+  const isKkomanttle = selectedGameSlug === 'kkomanttle'
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">랭킹</h1>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight">랭킹</h1>
         <p className="text-sm text-gray-500 mt-1">{displayedDate} 기준</p>
       </div>
 
-      {/* Game filter */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-5 scrollbar-hide">
+      {/* Game filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-5">
         <button
           onClick={() => setSelectedGame('all')}
           className={cn(
-            'shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
+            'shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors',
             selectedGame === 'all'
               ? 'bg-gray-900 text-white'
               : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
@@ -157,7 +162,7 @@ export default function RankingPage() {
             key={g.id}
             onClick={() => setSelectedGame(g.id)}
             className={cn(
-              'shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
+              'shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors',
               selectedGame === g.id
                 ? 'text-white'
                 : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
@@ -194,14 +199,23 @@ export default function RankingPage() {
         </button>
       </div>
 
+      {/* 꼬맨틀 정렬 안내 */}
+      {isKkomanttle && (
+        <p className="text-xs text-gray-400 mb-3">추측 횟수 오름차순 · 동점 시 소요 시간 기준</p>
+      )}
+
       {loading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-14 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} className="h-14 rounded-2xl bg-gray-200 animate-pulse" />
           ))}
         </div>
       ) : (
-        <RankingTable entries={shownEntries} currentUserId={user?.id} />
+        <RankingTable
+          entries={shownEntries}
+          currentUserId={user?.id}
+          isKkomanttle={isKkomanttle}
+        />
       )}
     </div>
   )

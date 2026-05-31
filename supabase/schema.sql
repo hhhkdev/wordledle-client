@@ -33,6 +33,8 @@ create table if not exists public.results (
   attempts integer,
   max_attempts integer,
   completed boolean default false,
+  -- Game-specific extra data (streak, time_seconds, max_similarity, puzzle_number, etc.)
+  metadata jsonb default '{}',
   created_at timestamptz default now(),
   unique(user_id, game_id, date)
 );
@@ -47,20 +49,44 @@ create table if not exists public.friends (
   check (user_id != friend_id)
 );
 
--- Seed games
+-- ── Add metadata column if upgrading from older schema ──────────────────────
+-- (safe to run even if column already exists)
+alter table public.results add column if not exists metadata jsonb default '{}';
+
+-- ── Games seed ──────────────────────────────────────────────────────────────
+-- Delete old games first to allow clean re-seed
+delete from public.games;
+
 insert into public.games (name, slug, url, description, emoji, color, result_format)
 values
-  ('Wordle', 'wordle', 'https://www.nytimes.com/games/wordle/index.html', '5글자 영단어 맞추기', '🟩', '#6aaa64', 'Wordle {number} {attempts}/6'),
-  ('꼬들', 'kkodle', 'https://kkodle.com', '한국어 5글자 단어 맞추기', '🟧', '#e77e2d', '꼬들 {number} {attempts}/6'),
-  ('Connections', 'connections', 'https://www.nytimes.com/games/connections', '4가지 카테고리로 단어 묶기', '🟨', '#f9c74f', 'Connections\nPuzzle #{number}'),
-  ('Mini Crossword', 'mini-crossword', 'https://www.nytimes.com/crosswords/game/mini', '5x5 미니 십자말풀이', '✏️', '#4a90d9', 'NYT Mini Crossword'),
-  ('Quordle', 'quordle', 'https://www.merriam-webster.com/games/quordle', '4개 단어 동시에 맞추기', '🟦', '#3b82f6', 'Daily Quordle {number}'),
-  ('Framed', 'framed', 'https://framed.wtf', '영화 스틸컷으로 영화 맞추기', '🎬', '#6366f1', 'Framed #{number}')
-on conflict (slug) do nothing;
+  (
+    'Wordle', 'wordle',
+    'https://www.nytimes.com/games/wordle/index.html',
+    '5글자 영단어 맞추기', '🟩', '#538d4e',
+    'Wordle 1,806 4/6'
+  ),
+  (
+    '꼬들', 'kkodle',
+    'https://kordle.kr',
+    '한국어 6글자 단어 맞추기', '🟧', '#e07c3a',
+    '꼬들 1610 5/6 Kordle.Kr 🔥3'
+  ),
+  (
+    '꼬오오오오들', 'kkooooodle',
+    'https://koooo.kordle.kr',
+    '한국어 12글자 단어 맞추기', '🟥', '#c0392b',
+    '꼬오오오오들 1310 5/6'
+  ),
+  (
+    '꼬맨틀', 'kkomanttle',
+    'https://semantle-ko.newsjel.ly',
+    '단어 유사도로 정답 찾기', '🧠', '#8e44ad',
+    'N번째 꼬맨틀을 풀었습니다!'
+  );
 
--- NOTE: RLS is disabled here since we use custom auth (not Supabase Auth).
--- All access control is handled at the application layer.
--- For production, consider using Supabase Auth and enabling RLS with proper policies.
+-- ── Row Level Security ──────────────────────────────────────────────────────
+-- NOTE: RLS disabled — using custom auth (not Supabase Auth).
+-- For production, integrate Supabase Auth and re-enable RLS with proper policies.
 alter table public.users disable row level security;
 alter table public.games disable row level security;
 alter table public.results disable row level security;

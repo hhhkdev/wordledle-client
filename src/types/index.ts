@@ -16,6 +16,13 @@ export interface Game {
   created_at: string
 }
 
+export interface GameResultMetadata {
+  puzzle_number?: number | null
+  streak?: number | null
+  time_seconds?: number | null
+  max_similarity?: number | null
+}
+
 export interface GameResult {
   id: string
   user_id: string
@@ -26,6 +33,7 @@ export interface GameResult {
   attempts: number | null
   max_attempts: number | null
   completed: boolean
+  metadata: GameResultMetadata | null
   created_at: string
   user?: User
   game?: Game
@@ -44,4 +52,5 @@ export interface ParsedResult {
   attempts: number | null
   max_attempts: number | null
   completed: boolean
+  metadata?: GameResultMetadata
 }

@@ -48,6 +48,7 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
       attempts: parsed.attempts,
       max_attempts: parsed.max_attempts,
       completed: parsed.completed,
+      metadata: parsed.metadata ?? {},
     }
 
     let data: GameResult | null = null
