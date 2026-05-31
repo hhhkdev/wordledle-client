@@ -29,7 +29,7 @@ export async function register(nickname: string, password: string): Promise<{ us
   const { data, error } = await supabase
     .from('users')
     .insert({ nickname, password_hash })
-    .select('id, nickname, created_at')
+    .select('id, nickname, is_admin, created_at')
     .single()
 
   if (error || !data) {
@@ -45,7 +45,7 @@ export async function login(nickname: string, password: string): Promise<{ user:
 
   const { data, error } = await supabase
     .from('users')
-    .select('id, nickname, created_at')
+    .select('id, nickname, is_admin, created_at')
     .eq('nickname', nickname)
     .eq('password_hash', password_hash)
     .single()

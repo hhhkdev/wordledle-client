@@ -6,6 +6,7 @@ create table if not exists public.users (
   id uuid primary key default uuid_generate_v4(),
   nickname text unique not null,
   password_hash text not null,
+  is_admin boolean not null default false,
   created_at timestamptz default now()
 );
 
@@ -19,8 +20,6 @@ create table if not exists public.games (
   emoji text,
   color text,
   result_format text,
-  -- 카드 배경 이미지 URL (권장 크기: 800×500px, 16:10 비율)
-  -- 안전 영역: 이미지 상단 40% (하단은 콘텐츠 오버레이로 가려짐)
   image_url text,
   created_at timestamptz default now()
 );
@@ -51,9 +50,18 @@ create table if not exists public.friends (
   check (user_id != friend_id)
 );
 
+-- Feedback table
+create table if not exists public.feedback (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references public.users(id) on delete set null,
+  content text not null check (char_length(content) >= 5 and char_length(content) <= 500),
+  created_at timestamptz default now()
+);
+
 -- ── 기존 스키마 업그레이드 (idempotent) ────────────────────────
 alter table public.results add column if not exists metadata jsonb default '{}';
 alter table public.games   add column if not exists image_url text;
+alter table public.users   add column if not exists is_admin boolean not null default false;
 
 -- ── Games seed ──────────────────────────────────────────────────
 delete from public.games;
@@ -64,29 +72,25 @@ values
     'Wordle', 'wordle',
     'https://www.nytimes.com/games/wordle/index.html',
     '5글자 영단어 맞추기', '🟩', '#538d4e',
-    'Wordle 1,806 4/6',
-    null
+    'Wordle 1,806 4/6', null
   ),
   (
     '꼬들', 'kkodle',
     'https://kordle.kr',
     '한국어 6글자 단어 맞추기', '🟧', '#e07c3a',
-    '꼬들 1610 5/6 Kordle.Kr 🔥3',
-    null
+    '꼬들 1610 5/6 Kordle.Kr 🔥3', null
   ),
   (
     '꼬오오오오들', 'kkooooodle',
     'https://koooo.kordle.kr',
     '한국어 12글자 단어 맞추기', '🟥', '#c0392b',
-    '꼬오오오오들 1310 5/6',
-    null
+    '꼬오오오오들 1310 5/6', null
   ),
   (
     '꼬맨틀', 'kkomanttle',
     'https://semantle-ko.newsjel.ly',
     '단어 유사도로 정답 찾기', '🧠', '#8e44ad',
-    'N번째 꼬맨틀을 풀었습니다!',
-    null
+    'N번째 꼬맨틀을 풀었습니다!', null
   );
 
 -- ── Row Level Security ──────────────────────────────────────────
@@ -94,3 +98,4 @@ alter table public.users    disable row level security;
 alter table public.games    disable row level security;
 alter table public.results  disable row level security;
 alter table public.friends  disable row level security;
+alter table public.feedback disable row level security;

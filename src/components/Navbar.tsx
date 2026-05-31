@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Trophy, Users, LogOut, LogIn, UserCircle } from 'lucide-react'
+import { Trophy, Users, LogOut, LogIn, UserCircle, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from './Logo'
 
@@ -52,6 +52,20 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-gray-200">
+              {user.is_admin && (
+                <Link
+                  href="/admin"
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                    pathname.startsWith('/admin')
+                      ? 'bg-red-100 text-red-700'
+                      : 'text-red-400 hover:bg-red-50 hover:text-red-600'
+                  )}
+                >
+                  <ShieldCheck size={15} />
+                  <span className="hidden sm:inline">어드민</span>
+                </Link>
+              )}
               {AUTH_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}

@@ -1,6 +1,7 @@
 export interface User {
   id: string
   nickname: string
+  is_admin: boolean
   created_at: string
 }
 
@@ -13,7 +14,7 @@ export interface Game {
   emoji: string
   color: string
   result_format: string
-  /** 카드 배경 이미지 URL. 권장: 800×500px (16:10). 안전 영역: 상단 40% */
+  /** 카드 배경 이미지 URL. 권장: 800×600px (4:3). 안전 영역: 상단 40% */
   image_url?: string | null
   created_at: string
 }
@@ -47,6 +48,14 @@ export interface Friend {
   friend_id: string
   created_at: string
   friend?: User
+}
+
+export interface Feedback {
+  id: string
+  user_id: string | null
+  content: string
+  created_at: string
+  user?: Pick<User, 'id' | 'nickname'>
 }
 
 export interface ParsedResult {
