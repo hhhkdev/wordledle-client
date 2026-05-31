@@ -54,7 +54,7 @@ create table if not exists public.friends (
 create table if not exists public.feedback (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references public.users(id) on delete set null,
-  content text not null check (char_length(content) >= 5 and char_length(content) <= 500),
+  content text not null check (char_length(content) <= 500),
   created_at timestamptz default now()
 );
 

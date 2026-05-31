@@ -19,7 +19,6 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
 
-  const MIN = 5
   const MAX = 500
 
   function handleClose() {
@@ -31,10 +30,7 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (content.trim().length < MIN) {
-      setError(`${MIN}자 이상 입력해주세요.`)
-      return
-    }
+    if (!content.trim()) return
 
     setLoading(true)
     setError('')
@@ -92,7 +88,7 @@ export default function FeedbackModal({ open, onClose }: FeedbackModalProps) {
               type="submit"
               size="lg"
               loading={loading}
-              disabled={content.trim().length < MIN}
+              disabled={!content.trim()}
               className="w-full bg-gray-900! hover:bg-gray-700!"
             >
               보내기
