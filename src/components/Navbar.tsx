@@ -26,8 +26,6 @@ export default function Navbar() {
     router.push('/')
   }
 
-  if (pathname === '/login' || pathname === '/register') return null
-
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/60">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
