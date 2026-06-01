@@ -21,7 +21,11 @@ interface RoundInfo {
   puzzleNumber: number | null
 }
 
-const RANK_MEDAL = ['🥇', '🥈', '🥉']
+const RANK_BADGE_STYLES = [
+  'bg-amber-100 text-amber-600',   // 1st
+  'bg-gray-100 text-gray-500',     // 2nd
+  'bg-orange-100 text-orange-500', // 3rd
+]
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
@@ -223,10 +227,13 @@ export default function HomePage() {
               const isMe = e.user.id === user?.id
               return (
                 <div className={cn(
-                  'flex items-center gap-4 px-5 py-4 rounded-2xl border-2',
-                  isMe ? 'bg-blue-50 border-blue-300' : 'bg-yellow-50 border-yellow-300'
+                  'flex items-center gap-3 px-4 py-4 rounded-2xl border-2',
+                  isMe ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'
                 )}>
-                  <span className="text-3xl">🥇</span>
+                  <div className={cn(
+                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg font-black',
+                    isMe ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
+                  )}>1</div>
                   <div className="flex-1 min-w-0">
                     <p className={cn('text-lg font-black truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
                       {e.user.nickname}
@@ -252,12 +259,13 @@ export default function HomePage() {
                   key={entry.user.id}
                   className={cn(
                     'flex items-center gap-3 px-4 py-2.5 rounded-2xl border',
-                    isMe ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'
+                    isMe ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-100'
                   )}
                 >
-                  <span className="text-lg w-6 text-center">
-                    {rank <= 3 ? RANK_MEDAL[rank - 1] : <span className="text-sm font-bold text-gray-400">{rank}</span>}
-                  </span>
+                  <div className={cn(
+                    'w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-sm font-black',
+                    isMe ? 'bg-blue-100 text-blue-600' : (RANK_BADGE_STYLES[rank - 1] ?? 'bg-gray-50 text-gray-400')
+                  )}>{rank}</div>
                   <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-800')}>
                     {entry.user.nickname}
                     {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}

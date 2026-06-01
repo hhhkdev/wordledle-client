@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 
 type Tab = 'global' | 'friends'
 type SortKey = 'completed' | 'score'
+type RangePeriod = 'today' | 'week' | 'month' | 'date' | 'all'
 
 interface RankingEntry {
   user: User
@@ -17,6 +18,41 @@ interface RankingEntry {
   totalScore: number
   completedCount: number
   primaryStat: number | null
+}
+
+function kstToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
+function getDateRange(period: RangePeriod, selectedDate: string) {
+  const today = kstToday()
+  switch (period) {
+    case 'today': return { gte: today, lte: today }
+    case 'week': {
+      const d = new Date(Date.now() - 6 * 86400000)
+      return { gte: d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) }
+    }
+    case 'month': {
+      const d = new Date(Date.now() - 29 * 86400000)
+      return { gte: d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) }
+    }
+    case 'date': return { gte: selectedDate, lte: selectedDate }
+    case 'all': return null
+  }
+}
+
+function getPeriodLabel(period: RangePeriod, selectedDate: string): string {
+  const todayLabel = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', timeZone: 'Asia/Seoul' })
+  switch (period) {
+    case 'today': return `오늘 (${todayLabel}) 기준`
+    case 'week': return '최근 7일 기준'
+    case 'month': return '최근 30일 기준'
+    case 'date': {
+      const [y, m, d] = selectedDate.split('-')
+      return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일 기준`
+    }
+    case 'all': return '전체 기간 누적'
+  }
 }
 
 function buildEntries(resultsData: (GameResult & { user: User })[]) {
@@ -36,81 +72,90 @@ function buildEntries(resultsData: (GameResult & { user: User })[]) {
 }
 
 function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null, sortKey: SortKey) {
-  // 꼬맨틀 단독 선택: 총 시도 횟수 오름차순 (적을수록 잘한 것)
   if (selectedGameSlug === 'kkomanttle') {
     return [...entries].sort((a, b) => {
-      const aAttempts = a.results.reduce((sum, r) => sum + (r.attempts ?? 0), 0)
-      const bAttempts = b.results.reduce((sum, r) => sum + (r.attempts ?? 0), 0)
-      return aAttempts - bAttempts
+      const aA = a.results.reduce((s, r) => s + (r.attempts ?? 0), 0)
+      const bA = b.results.reduce((s, r) => s + (r.attempts ?? 0), 0)
+      return aA - bA
     })
   }
-  if (sortKey === 'score') {
-    return [...entries].sort((a, b) => b.totalScore - a.totalScore)
-  }
-  // 완료순 (기본): 완료 횟수 내림차순 → 점수 내림차순
+  if (sortKey === 'score') return [...entries].sort((a, b) => b.totalScore - a.totalScore)
   return [...entries].sort((a, b) =>
-    b.completedCount !== a.completedCount
-      ? b.completedCount - a.completedCount
-      : b.totalScore - a.totalScore
+    b.completedCount !== a.completedCount ? b.completedCount - a.completedCount : b.totalScore - a.totalScore
   )
 }
+
+const PERIOD_OPTIONS: { key: RangePeriod; label: string }[] = [
+  { key: 'today', label: '오늘' },
+  { key: 'week', label: '이번 주' },
+  { key: 'month', label: '이번 달' },
+  { key: 'date', label: '날짜별' },
+  { key: 'all', label: '전체' },
+]
 
 export default function RankingPage() {
   const { user } = useAuth()
   const [tab, setTab] = useState<Tab>('global')
   const [sortKey, setSortKey] = useState<SortKey>('completed')
+  const [period, setPeriod] = useState<RangePeriod>('today')
+  const [selectedDate, setSelectedDate] = useState(kstToday())
   const [games, setGames] = useState<Game[]>([])
   const [selectedGame, setSelectedGame] = useState<string>('all')
   const [globalEntries, setGlobalEntries] = useState<RankingEntry[]>([])
   const [friendEntries, setFriendEntries] = useState<RankingEntry[]>([])
   const [loading, setLoading] = useState(true)
 
+  // 게임 목록은 한 번만 로드
   useEffect(() => {
-    async function load() {
-      const supabase = createClient()
-
-      const { data: gamesData } = await supabase.from('games').select('*').order('name')
-      if (gamesData) setGames(gamesData as Game[])
-
-      const { data: resultsData } = await supabase
-        .from('results')
-        .select('*, user:users(id, nickname, created_at)')
-
-      if (resultsData) {
-        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
-        setGlobalEntries(Array.from(entriesMap.values()))
-      }
-      setLoading(false)
-    }
-    load()
+    createClient().from('games').select('*').order('name').then(({ data }) => {
+      if (data) setGames(data as Game[])
+    })
   }, [])
 
+  // 기간/날짜/유저 변경 시 랭킹 재조회
   useEffect(() => {
-    if (!user) return
+    let cancelled = false
 
-    async function loadFriends() {
+    async function load() {
+      setLoading(true)
       const supabase = createClient()
+      const range = getDateRange(period, selectedDate)
 
-      const { data: friendsData } = await supabase
-        .from('friends')
-        .select('friend_id')
-        .eq('user_id', user!.id)
+      // 전체 랭킹
+      let q = supabase.from('results').select('*, user:users(id, nickname, created_at)')
+      if (range?.gte) q = q.gte('date', range.gte)
+      if (range?.lte) q = q.lte('date', range.lte)
+      const { data: globalData } = await q
 
-      const friendIds = (friendsData ?? []).map(f => f.friend_id)
-      const allIds = [user!.id, ...friendIds]
-
-      const { data: resultsData } = await supabase
-        .from('results')
-        .select('*, user:users(id, nickname, created_at)')
-        .in('user_id', allIds)
-
-      if (resultsData) {
-        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
-        setFriendEntries(Array.from(entriesMap.values()))
+      if (!cancelled && globalData) {
+        const map = buildEntries(globalData as (GameResult & { user: User })[])
+        setGlobalEntries(Array.from(map.values()))
       }
+
+      // 친구 랭킹
+      if (user) {
+        const { data: friendsData } = await supabase
+          .from('friends').select('friend_id').eq('user_id', user.id)
+        const friendIds = (friendsData ?? []).map(f => f.friend_id)
+        const allIds = [user.id, ...friendIds]
+
+        let fq = supabase.from('results').select('*, user:users(id, nickname, created_at)').in('user_id', allIds)
+        if (range?.gte) fq = fq.gte('date', range.gte)
+        if (range?.lte) fq = fq.lte('date', range.lte)
+        const { data: friendData } = await fq
+
+        if (!cancelled && friendData) {
+          const map = buildEntries(friendData as (GameResult & { user: User })[])
+          setFriendEntries(Array.from(map.values()))
+        }
+      }
+
+      if (!cancelled) setLoading(false)
     }
-    loadFriends()
-  }, [user])
+
+    load()
+    return () => { cancelled = true }
+  }, [period, selectedDate, user])
 
   const selectedGameObj = games.find(g => g.id === selectedGame)
   const selectedGameSlug = selectedGameObj?.slug ?? null
@@ -118,16 +163,17 @@ export default function RankingPage() {
 
   function filterByGame(entries: RankingEntry[]): RankingEntry[] {
     if (selectedGame === 'all') return sortEntries(entries, null, sortKey)
-
     const filtered = entries
       .map(e => {
         const gameResults = e.results.filter(r => r.game_id === selectedGame)
-        const totalScore = gameResults.reduce((sum, r) => sum + (r.score ?? 0), 0)
-        const completedCount = gameResults.filter(r => r.completed).length
-        return { ...e, results: gameResults, totalScore, completedCount }
+        return {
+          ...e,
+          results: gameResults,
+          totalScore: gameResults.reduce((s, r) => s + (r.score ?? 0), 0),
+          completedCount: gameResults.filter(r => r.completed).length,
+        }
       })
       .filter(e => e.results.length > 0)
-
     return sortEntries(filtered, selectedGameSlug, sortKey)
   }
 
@@ -135,20 +181,49 @@ export default function RankingPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">랭킹</h1>
-        <p className="text-sm text-gray-500 mt-1">누적 랭킹</p>
+        <p className="text-sm text-gray-400 mt-1">{getPeriodLabel(period, selectedDate)}</p>
       </div>
 
-      {/* Game filter chips */}
+      {/* 기간 선택 */}
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-2 -mx-4 px-4">
+        {PERIOD_OPTIONS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setPeriod(key)}
+            className={cn(
+              'shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-colors active:opacity-70',
+              period === key
+                ? 'bg-gray-900 text-white'
+                : 'bg-white border border-gray-200 text-gray-600'
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* 날짜 선택 (날짜별 모드) */}
+      {period === 'date' && (
+        <div className="mb-4">
+          <input
+            type="date"
+            value={selectedDate}
+            max={kstToday()}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-gray-300"
+          />
+        </div>
+      )}
+
+      {/* 게임 필터 칩 */}
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 -mx-4 px-4">
         <button
           onClick={() => setSelectedGame('all')}
           className={cn(
             'shrink-0 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:opacity-70',
-            selectedGame === 'all'
-              ? 'bg-gray-900 text-white'
-              : 'bg-white border border-gray-200 text-gray-600'
+            selectedGame === 'all' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600'
           )}
         >
           전체
@@ -159,9 +234,7 @@ export default function RankingPage() {
             onClick={() => setSelectedGame(g.id)}
             className={cn(
               'shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:opacity-70',
-              selectedGame === g.id
-                ? 'text-white'
-                : 'bg-white border border-gray-200 text-gray-600'
+              selectedGame === g.id ? 'text-white' : 'bg-white border border-gray-200 text-gray-600'
             )}
             style={selectedGame === g.id ? { backgroundColor: g.color } : undefined}
           >
@@ -170,7 +243,7 @@ export default function RankingPage() {
         ))}
       </div>
 
-      {/* Tab switch */}
+      {/* 탭 + 정렬 */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-3">
         <button
           onClick={() => setTab('global')}
@@ -179,8 +252,7 @@ export default function RankingPage() {
             tab === 'global' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           )}
         >
-          <Globe size={15} />
-          전체 랭킹
+          <Globe size={15} />전체 랭킹
         </button>
         <button
           onClick={() => setTab('friends')}
@@ -190,12 +262,10 @@ export default function RankingPage() {
             tab === 'friends' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           )}
         >
-          <Users size={15} />
-          친구 랭킹
+          <Users size={15} />친구 랭킹
         </button>
       </div>
 
-      {/* 정렬 토글 / 꼬맨틀 안내 */}
       <div className="mb-5">
         {isKkomanttle ? (
           <p className="text-xs text-gray-400 py-1">총 추측 횟수 오름차순</p>
@@ -226,15 +296,11 @@ export default function RankingPage() {
       {loading ? (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-14 rounded-2xl bg-gray-200 animate-pulse" />
+            <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
           ))}
         </div>
       ) : (
-        <RankingTable
-          entries={shownEntries}
-          currentUserId={user?.id}
-          isKkomanttle={isKkomanttle}
-        />
+        <RankingTable entries={shownEntries} currentUserId={user?.id} isKkomanttle={isKkomanttle} />
       )}
     </div>
   )

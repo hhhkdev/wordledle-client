@@ -7,7 +7,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://www.nytimes.com/games/wordle/index.html',
     description: '5글자 영단어 맞추기',
     emoji: '🟩',
-    color: '#538d4e',
+    color: '#3D6B47',
     result_format: 'Wordle 1,806 4/6',
   },
   {
@@ -16,7 +16,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://kordle.kr',
     description: '한국어 6글자 단어 맞추기',
     emoji: '🟧',
-    color: '#e07c3a',
+    color: '#B8562A',
     result_format: '꼬들 1610 5/6 Kordle.Kr 🔥3',
   },
   {
@@ -25,7 +25,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://koooo.kordle.kr',
     description: '한국어 12글자 단어 맞추기',
     emoji: '🟥',
-    color: '#c0392b',
+    color: '#9B3535',
     result_format: '꼬오오오오들 1310 5/6',
   },
   {
@@ -34,7 +34,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://semantle-ko.newsjel.ly',
     description: '단어 유사도로 정답 찾기',
     emoji: '🧠',
-    color: '#8e44ad',
+    color: '#5E3A96',
     result_format: 'N번째 꼬맨틀을 풀었습니다!\n추측 횟수: N\n소요 시간: ...',
   },
   {
@@ -43,7 +43,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: '',
     description: '카카오톡 미니게임 — 결과 입력 전용',
     emoji: '💬',
-    color: '#F7C200',
+    color: '#C49A00',
     result_format: '오늘의 단어 맞히기 성공!\n\n⬛🟨⬛⬛⬛\n🟩🟩🟩🟩🟩',
   },
 ]
