@@ -204,7 +204,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
                   <ExternalLink size={14} className="text-white" />
                   <span className="text-white font-black text-xs">게임하기</span>
                 </Link>
-                <div className="w-px bg-white/20 shrink-0" />
+                <div className="w-px bg-white/50 shrink-0" />
               </>
             ) : null}
 

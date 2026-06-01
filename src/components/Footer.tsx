@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { MessageSquarePlus } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
 
-const VERSION = 'v0.0.1'
+const VERSION = 'v0.0.2'
 
 export default function Footer() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
