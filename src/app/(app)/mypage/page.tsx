@@ -22,6 +22,7 @@ interface GameStat {
   game: Game
   totalPlayed: number
   totalCompleted: number
+  totalScore: number
   avgAttempts: number | null
   bestAttempts: number | null
   currentStreak: number
@@ -121,6 +122,7 @@ export default function MyPage() {
       game,
       totalPlayed: rs.length,
       totalCompleted: completed.length,
+      totalScore: rs.reduce((sum, r) => sum + (r.score ?? 0), 0),
       avgAttempts: attempts.length ? Math.round((attempts.reduce((a, b) => a + b, 0) / attempts.length) * 10) / 10 : null,
       bestAttempts: attempts.length ? Math.min(...attempts) : null,
       currentStreak: streak,
@@ -237,11 +239,17 @@ export default function MyPage() {
             {gameStats.map(stat => (
               <div
                 key={stat.game.id}
-                className="bg-white rounded-2xl border border-gray-200 p-4"
+                className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
               >
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">{stat.game.emoji}</span>
+                {/* 색상 식별 바 */}
+                <div className="h-1.5" style={{ backgroundColor: stat.game.color }} />
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
+                    <span className="text-base font-black tabular-nums" style={{ color: stat.game.color }}>
+                      {stat.totalScore}
+                      <span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <StatItem label="완료" value={`${stat.totalCompleted}회`} />
@@ -258,6 +266,7 @@ export default function MyPage() {
                       value={stat.currentStreak > 0 ? `🔥${stat.currentStreak}일` : '-'}
                     />
                   </div>
+                </div>
               </div>
             ))}
           </div>
