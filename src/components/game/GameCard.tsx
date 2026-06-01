@@ -12,6 +12,7 @@ interface GameCardProps {
   game: Game
   result?: GameResult | null
   onResultChange: (result: GameResult) => void
+  featured?: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -21,6 +22,15 @@ function formatTime(seconds: number): string {
   if (h > 0) return `${h}시간 ${m}분`
   if (m > 0) return `${m}분 ${s}초`
   return `${s}초`
+}
+
+function ScoreChip({ score }: { score: number | null }) {
+  if (score == null || score === 0) return null
+  return (
+    <span className="bg-white/25 rounded-lg px-2 py-0.5 text-xs font-bold text-white">
+      +{score}점
+    </span>
+  )
 }
 
 function ResultStats({ game, result }: { game: Game; result: GameResult }) {
@@ -38,6 +48,7 @@ function ResultStats({ game, result }: { game: Game; result: GameResult }) {
             <Clock size={10} />{formatTime(meta.time_seconds!)}
           </span>
         )}
+        {result.completed && <ScoreChip score={result.score} />}
       </div>
     )
   }
@@ -53,11 +64,12 @@ function ResultStats({ game, result }: { game: Game; result: GameResult }) {
           <Flame size={10} />{meta.streak}일
         </span>
       )}
+      {result.completed && <ScoreChip score={result.score} />}
     </div>
   )
 }
 
-export default function GameCard({ game, result, onResultChange }: GameCardProps) {
+export default function GameCard({ game, result, onResultChange, featured }: GameCardProps) {
   const { user } = useAuth()
   const [showChoice, setShowChoice] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -86,7 +98,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         className={cn(
           'relative flex flex-col rounded-2xl overflow-hidden cursor-pointer',
           'transition-all duration-200',
-          hasImage ? 'aspect-4/3' : '',
+          featured ? 'min-h-48' : hasImage ? 'aspect-4/3' : '',
           dimmed && !showChoice && 'grayscale opacity-70',
           !showChoice && 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'
         )}
@@ -117,8 +129,8 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         )}
 
         {/* 일반 상태 - 항상 렌더링하여 카드 높이 유지 */}
-        <div className="relative z-10 flex flex-col flex-1 p-4">
-          <h3 className="text-lg font-black text-white leading-tight">{game.name}</h3>
+        <div className={cn('relative z-10 flex flex-col flex-1', featured ? 'p-5' : 'p-4')}>
+          <h3 className={cn('font-black text-white leading-tight', featured ? 'text-2xl' : 'text-lg')}>{game.name}</h3>
           <p className="text-sm text-white/70 mt-0.5">{game.description}</p>
 
           <div className="flex-1" />

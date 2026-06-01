@@ -9,6 +9,7 @@ import Announcements from '@/components/Announcements'
 import Link from 'next/link'
 import { LogIn, Trophy, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getGameCurrentPeriodStart } from '@/lib/games'
 
 interface RankingEntry {
   user: User
@@ -16,111 +17,125 @@ interface RankingEntry {
   totalScore: number
 }
 
-interface RoundInfo {
-  gameId: string
-  puzzleNumber: number | null
+const RANK_BADGE_STYLES = [
+  'bg-amber-100 text-amber-600',
+  'bg-gray-100 text-gray-500',
+  'bg-orange-100 text-orange-500',
+]
+
+function kstToday() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
-const RANK_BADGE_STYLES = [
-  'bg-amber-100 text-amber-600',   // 1st
-  'bg-gray-100 text-gray-500',     // 2nd
-  'bg-orange-100 text-orange-500', // 3rd
-]
+function kstYesterday() {
+  return new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
   const [games, setGames] = useState<Game[]>([])
-  const [results, setResults] = useState<Record<string, GameResult>>({})
+  const [currentResults, setCurrentResults] = useState<Record<string, GameResult>>({})
   const [topRanking, setTopRanking] = useState<RankingEntry[]>([])
-  const [currentRounds, setCurrentRounds] = useState<RoundInfo[]>([])
   const [loadingGames, setLoadingGames] = useState(true)
 
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-
   useEffect(() => {
-    async function fetchGames() {
-      const supabase = createClient()
-      const { data } = await supabase.from('games').select('*').order('name')
+    createClient().from('games').select('*').order('name').then(({ data }) => {
       if (data) setGames(data as Game[])
       setLoadingGames(false)
-    }
-    fetchGames()
+    })
   }, [])
 
+  // 현재 회차 결과 (lamp 지시등용) — 게임별 초기화 시각 기준
   useEffect(() => {
-    if (!user) {
-      setResults({})
-      return
-    }
-    if (games.length === 0) return
-    async function fetchTodayResults() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('results').select('*').eq('user_id', user!.id).eq('date', today)
-      if (data) {
-        const map: Record<string, GameResult> = {}
-        for (const r of data) map[r.game_id] = r
-        setResults(map)
-      }
-    }
-    fetchTodayResults()
-  }, [user, games, today])
+    if (!user || games.length === 0) return
+    const yesterday = kstYesterday()
+    createClient()
+      .from('results')
+      .select('*')
+      .eq('user_id', user.id)
+      .gte('date', yesterday)
+      .then(({ data }) => {
+        if (!data) return
 
-  useEffect(() => {
-    async function fetchTopRanking() {
-      const supabase = createClient()
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-      const { data } = await supabase
-        .from('results')
-        .select('user_id, game_id, score, completed, puzzle_number, date, user:users(id, nickname, created_at, is_admin)')
-        .gte('date', sevenDaysAgo)
-      if (!data) return
-
-      // 게임별 최신 회차 식별자 (puzzle_number 또는 date)
-      const latestPuzzleByGame = new Map<string, number>()
-      const latestDateByGame = new Map<string, string>()
-      for (const r of data) {
-        if (r.puzzle_number != null) {
-          const cur = latestPuzzleByGame.get(r.game_id) ?? 0
-          if (r.puzzle_number > cur) latestPuzzleByGame.set(r.game_id, r.puzzle_number)
-        } else {
-          const cur = latestDateByGame.get(r.game_id) ?? ''
-          if (r.date > cur) latestDateByGame.set(r.game_id, r.date)
+        // game_id 별로 묶기
+        const byGame = new Map<string, GameResult[]>()
+        for (const r of data as GameResult[]) {
+          if (!byGame.has(r.game_id)) byGame.set(r.game_id, [])
+          byGame.get(r.game_id)!.push(r)
         }
-      }
 
-      setCurrentRounds([
-        ...Array.from(latestPuzzleByGame.entries()).map(([gameId, puzzleNumber]) => ({ gameId, puzzleNumber })),
-        ...Array.from(latestDateByGame.keys()).map(gameId => ({ gameId, puzzleNumber: null })),
-      ])
+        // 각 게임의 현재 회차 시작 이후 결과만
+        const valid: Record<string, GameResult> = {}
+        for (const game of games) {
+          const periodStart = getGameCurrentPeriodStart(game.slug)
+          const latest = (byGame.get(game.id) ?? [])
+            .filter(r => r.date >= periodStart)
+            .sort((a, b) => b.date.localeCompare(a.date))[0]
+          if (latest) valid[game.id] = latest
+        }
+        setCurrentResults(valid)
+      })
+  }, [user, games])
 
-      // 최신 회차 결과만 집계
-      const map = new Map<string, RankingEntry>()
-      for (const r of data) {
-        const isCurrentRound = r.puzzle_number != null
-          ? latestPuzzleByGame.get(r.game_id) === r.puzzle_number
-          : latestDateByGame.get(r.game_id) === r.date
-        if (!isCurrentRound) continue
-        const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
-        if (!u) continue
-        if (!map.has(u.id)) map.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
-        const e = map.get(u.id)!
-        e.totalScore += r.score ?? 0
-        if (r.completed) e.completedCount++
-      }
-      const sorted = Array.from(map.values())
-        .sort((a, b) => b.completedCount !== a.completedCount
-          ? b.completedCount - a.completedCount
-          : b.totalScore - a.totalScore)
-        .slice(0, 5)
-      setTopRanking(sorted)
-    }
-    fetchTopRanking()
+  // 최근 24시간 랭킹 (어제·오늘 결과, 게임당 가장 최신 1건)
+  useEffect(() => {
+    const yesterday = kstYesterday()
+    const today = kstToday()
+    createClient()
+      .from('results')
+      .select('user_id, game_id, score, completed, date, user:users(id, nickname, created_at)')
+      .gte('date', yesterday)
+      .lte('date', today)
+      .then(({ data }) => {
+        if (!data) return
+
+        // (user_id, game_id) 당 가장 최신 날짜 결과
+        const best = new Map<string, typeof data[0]>()
+        for (const r of data) {
+          const k = `${r.user_id}|${r.game_id}`
+          const cur = best.get(k)
+          if (!cur || r.date > cur.date) best.set(k, r)
+        }
+
+        // 유저별 합산
+        const userMap = new Map<string, RankingEntry>()
+        for (const r of best.values()) {
+          const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
+          if (!u) continue
+          if (!userMap.has(u.id)) userMap.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
+          const e = userMap.get(u.id)!
+          e.totalScore += r.score ?? 0
+          if (r.completed) e.completedCount++
+        }
+
+        const sorted = Array.from(userMap.values())
+          .sort((a, b) =>
+            b.completedCount !== a.completedCount
+              ? b.completedCount - a.completedCount
+              : b.totalScore - a.totalScore
+          )
+          .slice(0, 5)
+        setTopRanking(sorted)
+      })
   }, [])
 
-  const todayStr = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
-  const completedCount = Object.values(results).filter(r => r.completed).length
+  const wordleGame = games.find(g => g.slug === 'wordle')
+  const otherGames = games.filter(g => g.slug !== 'wordle')
+
+  const completedCount = Object.values(currentResults).filter(r => r.completed).length
   const totalGames = games.length
+
+  const todayStr = new Date().toLocaleDateString('ko-KR', {
+    month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul',
+  })
+
+  const sortedOtherGames = [...otherGames].sort((a, b) => {
+    if (!user) return 0
+    const aHas = !!currentResults[a.id]
+    const bHas = !!currentResults[b.id]
+    if (aHas === bHas) return 0
+    return aHas ? 1 : -1
+  })
 
   return (
     <div>
@@ -155,73 +170,61 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Game grid: 모바일 1열, sm 이상 2열 */}
+      {/* 게임 목록 */}
       {loadingGames ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-40 rounded-2xl bg-gray-200 animate-pulse" />
-          ))}
+        <div className="flex flex-col gap-3">
+          <div className="h-48 rounded-2xl bg-gray-200 animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-36 rounded-2xl bg-gray-200 animate-pulse" />
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[...games]
-            .sort((a, b) => {
-              // 로그인 유저: 결과 입력한 게임은 하단
-              if (!user) return 0
-              const aHas = !!results[a.id]
-              const bHas = !!results[b.id]
-              if (aHas === bHas) return 0
-              return aHas ? 1 : -1
-            })
-            .map(game => (
+        <div className="flex flex-col gap-3">
+          {/* Wordle — 단독 피처드 카드 */}
+          {wordleGame && (
+            <GameCard
+              game={wordleGame}
+              result={currentResults[wordleGame.id] ?? null}
+              onResultChange={r => setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))}
+              featured
+            />
+          )}
+
+          {/* 나머지 게임 2열 그리드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {sortedOtherGames.map(game => (
               <GameCard
                 key={game.id}
                 game={game}
-                result={results[game.id] ?? null}
-                onResultChange={r => setResults(prev => ({ ...prev, [r.game_id]: r }))}
+                result={currentResults[game.id] ?? null}
+                onResultChange={r => setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))}
               />
             ))}
+          </div>
         </div>
       )}
 
-      {/* 이번 회차 랭킹 — 전체 너비 */}
+      {/* 최근 24시간 랭킹 */}
       <div className="mt-8">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <Trophy size={18} className="text-yellow-500" />
-            이번 회차 랭킹
+            최근 24시간 랭킹
           </h2>
           <Link href="/ranking" className="flex items-center gap-0.5 text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors">
             전체보기 <ChevronRight size={14} />
           </Link>
         </div>
-        {currentRounds.length > 0 && (
-          <p className="text-xs text-gray-400 mb-3">
-            {currentRounds
-              .map(r => {
-                const g = games.find(g => g.id === r.gameId)
-                if (!g) return null
-                // 한국 게임은 자정 기준 초기화 → 날짜 표시, 해외 게임은 회차 번호
-                const isKorean = g.slug !== 'wordle'
-                if (isKorean) {
-                  const dateStr = new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
-                  return `${g.emoji} ${dateStr}`
-                }
-                return `${g.emoji} #${r.puzzleNumber}`
-              })
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        )}
-        {currentRounds.length === 0 && <div className="mb-3" />}
 
         {topRanking.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 py-10 text-center text-gray-300 text-sm">
-            아직 이번 회차 결과가 없어요
+            아직 결과가 없어요
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {/* 1등 강조 카드 */}
+            {/* 1위 강조 */}
             {topRanking[0] && (() => {
               const e = topRanking[0]
               const isMe = e.user.id === user?.id
@@ -250,7 +253,7 @@ export default function HomePage() {
               )
             })()}
 
-            {/* 2~5등 */}
+            {/* 2~5위 */}
             {topRanking.slice(1).map((entry, idx) => {
               const rank = idx + 2
               const isMe = entry.user.id === user?.id
@@ -285,7 +288,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 공지사항 */}
       <Announcements />
     </div>
   )
