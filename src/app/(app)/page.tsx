@@ -31,7 +31,7 @@ export default function HomePage() {
   const [currentRounds, setCurrentRounds] = useState<RoundInfo[]>([])
   const [loadingGames, setLoadingGames] = useState(true)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 
   useEffect(() => {
     async function fetchGames() {

@@ -22,7 +22,7 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()

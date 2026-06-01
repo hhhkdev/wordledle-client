@@ -33,12 +33,13 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
 }
 
+function getKSTDate(offsetDays = 0): string {
+  const d = new Date(Date.now() - offsetDays * 86400000)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
 function getRecentDates(n: number): string[] {
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    return d.toISOString().slice(0, 10)
-  })
+  return Array.from({ length: n }, (_, i) => getKSTDate(i))
 }
 
 function calcStreak(dates: string[], completedDates: Set<string>): number {
@@ -127,7 +128,7 @@ export default function MyPage() {
   })
 
   // 오늘 현황
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getKSTDate()
   const todayResults = byDate.get(today) ?? []
   const todayCompleted = todayResults.filter(r => r.completed).length
 
