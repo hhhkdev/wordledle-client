@@ -33,7 +33,7 @@ export default function RankingTable({ entries, currentUserId, isKkomanttle }: R
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <p className="text-4xl mb-3">🏆</p>
-        <p className="text-sm font-semibold text-gray-500">아직 오늘의 결과가 없어요</p>
+        <p className="text-sm font-semibold text-gray-500">아직 이번 회차 결과가 없어요</p>
         <p className="text-xs text-gray-400 mt-1">게임을 완료하고 결과를 입력해보세요</p>
       </div>
     )

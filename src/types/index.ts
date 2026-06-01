@@ -36,6 +36,7 @@ export interface GameResult {
   attempts: number | null
   max_attempts: number | null
   completed: boolean
+  puzzle_number: number | null
   metadata: GameResultMetadata | null
   created_at: string
   user?: User

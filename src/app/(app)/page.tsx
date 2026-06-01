@@ -16,6 +16,11 @@ interface RankingEntry {
   totalScore: number
 }
 
+interface RoundInfo {
+  gameId: string
+  puzzleNumber: number
+}
+
 const RANK_MEDAL = ['🥇', '🥈', '🥉']
 
 export default function HomePage() {
@@ -23,6 +28,7 @@ export default function HomePage() {
   const [games, setGames] = useState<Game[]>([])
   const [results, setResults] = useState<Record<string, GameResult>>({})
   const [topRanking, setTopRanking] = useState<RankingEntry[]>([])
+  const [currentRounds, setCurrentRounds] = useState<RoundInfo[]>([])
   const [loadingGames, setLoadingGames] = useState(true)
 
   const today = new Date().toISOString().slice(0, 10)
@@ -59,13 +65,31 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchTopRanking() {
       const supabase = createClient()
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data } = await supabase
         .from('results')
-        .select('user_id, score, completed, user:users(id, nickname, created_at, is_admin)')
-        .eq('date', today)
+        .select('user_id, game_id, score, completed, puzzle_number, user:users(id, nickname, created_at, is_admin)')
+        .gte('date', sevenDaysAgo)
+        .not('puzzle_number', 'is', null)
       if (!data) return
+
+      // 게임별 최신 회차 번호 찾기
+      const latestByGame = new Map<string, number>()
+      for (const r of data) {
+        if (r.puzzle_number == null) continue
+        const cur = latestByGame.get(r.game_id) ?? 0
+        if (r.puzzle_number > cur) latestByGame.set(r.game_id, r.puzzle_number)
+      }
+
+      setCurrentRounds(
+        Array.from(latestByGame.entries()).map(([gameId, puzzleNumber]) => ({ gameId, puzzleNumber }))
+      )
+
+      // 최신 회차 결과만 집계
       const map = new Map<string, RankingEntry>()
       for (const r of data) {
+        if (r.puzzle_number == null) continue
+        if (latestByGame.get(r.game_id) !== r.puzzle_number) continue
         const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
         if (!u) continue
         if (!map.has(u.id)) map.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
@@ -81,7 +105,7 @@ export default function HomePage() {
       setTopRanking(sorted)
     }
     fetchTopRanking()
-  }, [today])
+  }, [])
 
   const todayStr = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
   const completedCount = Object.values(results).filter(r => r.completed).length
@@ -149,21 +173,33 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 오늘의 랭킹 — 전체 너비 */}
+      {/* 이번 회차 랭킹 — 전체 너비 */}
       <div className="mt-8">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <Trophy size={18} className="text-yellow-500" />
-            오늘의 랭킹
+            이번 회차 랭킹
           </h2>
           <Link href="/ranking" className="flex items-center gap-0.5 text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors">
             전체보기 <ChevronRight size={14} />
           </Link>
         </div>
+        {currentRounds.length > 0 && (
+          <p className="text-xs text-gray-400 mb-3">
+            {currentRounds
+              .map(r => {
+                const g = games.find(g => g.id === r.gameId)
+                return g ? `${g.emoji} #${r.puzzleNumber}` : null
+              })
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        )}
+        {currentRounds.length === 0 && <div className="mb-3" />}
 
         {topRanking.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 py-10 text-center text-gray-300 text-sm">
-            아직 오늘의 결과가 없어요
+            아직 이번 회차 결과가 없어요
           </div>
         ) : (
           <div className="flex flex-col gap-2">

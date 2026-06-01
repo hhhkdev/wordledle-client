@@ -18,6 +18,18 @@ interface RankingEntry {
   primaryStat: number | null  // game-specific: attempts for kkomanttle, score otherwise
 }
 
+function filterToLatestRounds(results: GameResult[]): GameResult[] {
+  const latestByGame = new Map<string, number>()
+  for (const r of results) {
+    if (r.puzzle_number == null) continue
+    const cur = latestByGame.get(r.game_id) ?? 0
+    if (r.puzzle_number > cur) latestByGame.set(r.game_id, r.puzzle_number)
+  }
+  return results.filter(r =>
+    r.puzzle_number != null && latestByGame.get(r.game_id) === r.puzzle_number
+  )
+}
+
 function buildEntries(resultsData: (GameResult & { user: User })[]) {
   const entriesMap = new Map<string, RankingEntry>()
   for (const r of resultsData) {
@@ -64,8 +76,6 @@ export default function RankingPage() {
   const [friendEntries, setFriendEntries] = useState<RankingEntry[]>([])
   const [loading, setLoading] = useState(true)
 
-  const today = new Date().toISOString().slice(0, 10)
-
   useEffect(() => {
     async function load() {
       const supabase = createClient()
@@ -73,19 +83,22 @@ export default function RankingPage() {
       const { data: gamesData } = await supabase.from('games').select('*').order('name')
       if (gamesData) setGames(gamesData as Game[])
 
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data: resultsData } = await supabase
         .from('results')
         .select('*, user:users(id, nickname, created_at)')
-        .eq('date', today)
+        .gte('date', sevenDaysAgo)
+        .not('puzzle_number', 'is', null)
 
       if (resultsData) {
-        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        const filtered = filterToLatestRounds(resultsData as GameResult[])
+        const entriesMap = buildEntries(filtered as (GameResult & { user: User })[])
         setGlobalEntries(sortEntries(Array.from(entriesMap.values()), null))
       }
       setLoading(false)
     }
     load()
-  }, [today])
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -101,19 +114,22 @@ export default function RankingPage() {
       const friendIds = (friendsData ?? []).map(f => f.friend_id)
       const allIds = [user!.id, ...friendIds]
 
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data: resultsData } = await supabase
         .from('results')
         .select('*, user:users(id, nickname, created_at)')
-        .eq('date', today)
+        .gte('date', sevenDaysAgo)
+        .not('puzzle_number', 'is', null)
         .in('user_id', allIds)
 
       if (resultsData) {
-        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        const filtered = filterToLatestRounds(resultsData as GameResult[])
+        const entriesMap = buildEntries(filtered as (GameResult & { user: User })[])
         setFriendEntries(sortEntries(Array.from(entriesMap.values()), null))
       }
     }
     loadFriends()
-  }, [user, today])
+  }, [user])
 
   const selectedGameObj = games.find(g => g.id === selectedGame)
   const selectedGameSlug = selectedGameObj?.slug ?? null
@@ -133,7 +149,6 @@ export default function RankingPage() {
     return sortEntries(filtered, selectedGameSlug)
   }
 
-  const displayedDate = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
   const shownEntries = tab === 'global' ? filterByGame(globalEntries) : filterByGame(friendEntries)
   const isKkomanttle = selectedGameSlug === 'kkomanttle'
 
@@ -141,7 +156,7 @@ export default function RankingPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">랭킹</h1>
-        <p className="text-sm text-gray-500 mt-1">{displayedDate} 기준</p>
+        <p className="text-sm text-gray-500 mt-1">이번 회차 기준</p>
       </div>
 
       {/* Game filter chips */}

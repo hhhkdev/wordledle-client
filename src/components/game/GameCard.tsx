@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Edit3, XCircle, Flame, Clock, Brain, ExternalLink, Plus, X } from 'lucide-react'
+import { CheckCircle2, Edit3, XCircle, Flame, Clock, Brain, ExternalLink, Plus, X, ChevronRight } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import ResultModal from './ResultModal'
@@ -129,13 +129,17 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
           <div className="flex-1" />
 
-          {!showChoice && <p className="text-xs text-white/40 text-right mt-1">탭하여 선택</p>}
+          {!showChoice && (
+            <div className="flex justify-end mt-1">
+              <ChevronRight size={16} className="text-white/40" />
+            </div>
+          )}
         </div>
 
         {/* 선택지 오버레이 */}
         {showChoice && (
           <div
-            className="absolute inset-0 z-20 flex flex-col"
+            className="absolute inset-0 z-20 flex flex-row"
             onClick={e => e.stopPropagation()}
           >
             {/* 닫기 버튼 */}
@@ -158,7 +162,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
               <span className="text-white font-black text-sm">게임하기</span>
             </Link>
 
-            <div className="h-px bg-white/20 shrink-0" />
+            <div className="w-px bg-white/20 shrink-0" />
 
             {/* 결과 입력 */}
             <button
