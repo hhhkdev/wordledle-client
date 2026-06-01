@@ -148,19 +148,22 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
               <X size={14} />
             </button>
 
-            {/* 게임하기 */}
-            <Link
-              href={game.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 bg-black/50 active:bg-black/70 transition-colors"
-              onClick={() => setShowChoice(false)}
-            >
-              <ExternalLink size={16} className="text-white" />
-              <span className="text-white font-black text-sm">게임하기</span>
-            </Link>
-
-            <div className="w-px bg-white/20 shrink-0" />
+            {/* 게임하기 (URL 있는 게임만) */}
+            {game.url ? (
+              <>
+                <Link
+                  href={game.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 bg-black/50 active:bg-black/70 transition-colors"
+                  onClick={() => setShowChoice(false)}
+                >
+                  <ExternalLink size={16} className="text-white" />
+                  <span className="text-white font-black text-sm">게임하기</span>
+                </Link>
+                <div className="w-px bg-white/20 shrink-0" />
+              </>
+            ) : null}
 
             {/* 결과 입력 */}
             <button

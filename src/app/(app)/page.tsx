@@ -18,7 +18,7 @@ interface RankingEntry {
 
 interface RoundInfo {
   gameId: string
-  puzzleNumber: number
+  puzzleNumber: number | null
 }
 
 const RANK_MEDAL = ['🥇', '🥈', '🥉']
@@ -68,28 +68,35 @@ export default function HomePage() {
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data } = await supabase
         .from('results')
-        .select('user_id, game_id, score, completed, puzzle_number, user:users(id, nickname, created_at, is_admin)')
+        .select('user_id, game_id, score, completed, puzzle_number, date, user:users(id, nickname, created_at, is_admin)')
         .gte('date', sevenDaysAgo)
-        .not('puzzle_number', 'is', null)
       if (!data) return
 
-      // 게임별 최신 회차 번호 찾기
-      const latestByGame = new Map<string, number>()
+      // 게임별 최신 회차 식별자 (puzzle_number 또는 date)
+      const latestPuzzleByGame = new Map<string, number>()
+      const latestDateByGame = new Map<string, string>()
       for (const r of data) {
-        if (r.puzzle_number == null) continue
-        const cur = latestByGame.get(r.game_id) ?? 0
-        if (r.puzzle_number > cur) latestByGame.set(r.game_id, r.puzzle_number)
+        if (r.puzzle_number != null) {
+          const cur = latestPuzzleByGame.get(r.game_id) ?? 0
+          if (r.puzzle_number > cur) latestPuzzleByGame.set(r.game_id, r.puzzle_number)
+        } else {
+          const cur = latestDateByGame.get(r.game_id) ?? ''
+          if (r.date > cur) latestDateByGame.set(r.game_id, r.date)
+        }
       }
 
-      setCurrentRounds(
-        Array.from(latestByGame.entries()).map(([gameId, puzzleNumber]) => ({ gameId, puzzleNumber }))
-      )
+      setCurrentRounds([
+        ...Array.from(latestPuzzleByGame.entries()).map(([gameId, puzzleNumber]) => ({ gameId, puzzleNumber })),
+        ...Array.from(latestDateByGame.keys()).map(gameId => ({ gameId, puzzleNumber: null })),
+      ])
 
       // 최신 회차 결과만 집계
       const map = new Map<string, RankingEntry>()
       for (const r of data) {
-        if (r.puzzle_number == null) continue
-        if (latestByGame.get(r.game_id) !== r.puzzle_number) continue
+        const isCurrentRound = r.puzzle_number != null
+          ? latestPuzzleByGame.get(r.game_id) === r.puzzle_number
+          : latestDateByGame.get(r.game_id) === r.date
+        if (!isCurrentRound) continue
         const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
         if (!u) continue
         if (!map.has(u.id)) map.set(u.id, { user: u, completedCount: 0, totalScore: 0 })

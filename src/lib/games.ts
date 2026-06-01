@@ -37,6 +37,15 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     color: '#8e44ad',
     result_format: 'N번째 꼬맨틀을 풀었습니다!\n추측 횟수: N\n소요 시간: ...',
   },
+  {
+    name: '카카오 오늘의 단어',
+    slug: 'kakao-word',
+    url: '',
+    description: '카카오톡 미니게임 — 결과 입력 전용',
+    emoji: '💬',
+    color: '#F7C200',
+    result_format: '오늘의 단어 맞히기 성공!\n\n⬛🟨⬛⬛⬛\n🟩🟩🟩🟩🟩',
+  },
 ]
 
 // ── 점수 계산 헬퍼 ──────────────────────────────────────────
@@ -135,6 +144,27 @@ export function parseGameResult(
           time_seconds: timeSeconds,
           max_similarity: similarityMatch ? parseFloat(similarityMatch[1]) : null,
         },
+      }
+    }
+
+    case 'kakao-word': {
+      // 한국어: "오늘의 단어 맞히기 성공!" / 영어: "Today's Word Guess: Success"
+      const completed =
+        text.includes('성공') ||
+        text.toLowerCase().includes('success')
+      if (!text.includes('오늘의 단어') && !text.toLowerCase().includes("today's word")) return null
+
+      // 이모지 행(⬛🟨🟩로만 구성된 줄) 개수로 시도 횟수 산출
+      const emojiRowPattern = /^[⬛🟨🟩]+$/
+      const emojiRows = text.split('\n').filter(l => emojiRowPattern.test(l.trim()))
+      const attempts = emojiRows.length > 0 ? emojiRows.length : null
+
+      return {
+        score: scoreCleared(attempts, 6, 10),
+        attempts,
+        max_attempts: 6,
+        completed,
+        metadata: { puzzle_number: null },
       }
     }
 

@@ -35,7 +35,9 @@ pnpm tsc --noEmit  # TypeScript 타입 체크
 `src/lib/games.ts`의 `parseGameResult(gameSlug, rawText)` 함수로 게임별 공유 텍스트를 파싱.
 반환값: `{ score, attempts, max_attempts, completed, metadata }`
 
-현재 지원 slug: `wordle`, `kkodle`, `kkooooodle`, `kkomanttle`
+현재 지원 slug: `wordle`, `kkodle`, `kkooooodle`, `kkomanttle`, `kakao-word`
+
+`kakao-word`는 URL 없이 결과 입력만 가능한 게임 (카카오톡 미니게임). `game.url = ''`로 설정.
 
 새 게임 추가 시:
 1. `GAMES` 배열에 게임 정보 추가
@@ -52,10 +54,11 @@ pnpm tsc --noEmit  # TypeScript 타입 체크
 | 꼬들 | 10점 | +1점/절약한 시도 (max 6) | 10점 | 15점 | 0점 |
 | 꼬오오오오들 | 20점 | +1점/절약한 시도 (max 6) | 20점 | 25점 | 0점 |
 | 꼬맨틀 | 20점 | 없음 (시도 무제한) | — | 20점 | 0점 |
+| 카카오 오늘의 단어 | 10점 | +1점/절약한 시도 (max 6) | 10점 | 15점 | 0점 |
 
 **예시**: 꼬들을 4번 만에 클리어 → 10 + (6−4) = **12점**
 
-**4게임 전체 최대**: 15 + 15 + 25 + 20 = **75점**
+**5게임 전체 최대**: 15 + 15 + 25 + 20 + 15 = **90점**
 
 랭킹은 누적 점수 기준. 꼬맨틀 단독 랭킹은 총 추측 횟수 오름차순(적을수록 상위).
 
@@ -67,6 +70,7 @@ pnpm tsc --noEmit  # TypeScript 타입 체크
 | 꼬들 | 자정 KST | 날짜 기준 |
 | 꼬오오오오들 | 자정 KST | 날짜 기준 |
 | 꼬맨틀 | 자정 KST | 날짜 기준 |
+| 카카오 오늘의 단어 | 자정 KST | 날짜 기준 · URL 없음 (카카오톡 전용) |
 
 홈 화면 "이번 회차 랭킹"에서 Wordle은 회차 번호, 한국 게임은 날짜로 표시.
 
