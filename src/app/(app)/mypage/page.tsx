@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { Game, GameResult } from '@/types'
-import { CheckCircle2, XCircle, Minus, Pencil, Check, X } from 'lucide-react'
+import { CheckCircle2, XCircle, Minus, Pencil, Check, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -229,45 +229,15 @@ export default function MyPage() {
       <section className="mb-5">
         <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-32 rounded-2xl bg-gray-200 animate-pulse" />
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-14 animate-pulse bg-gray-50" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
             {gameStats.map(stat => (
-              <div
-                key={stat.game.id}
-                className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-              >
-                {/* 색상 식별 바 */}
-                <div className="h-1.5" style={{ backgroundColor: stat.game.color }} />
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
-                    <span className="text-base font-black tabular-nums" style={{ color: stat.game.color }}>
-                      {stat.totalScore}
-                      <span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <StatItem label="완료" value={`${stat.totalCompleted}회`} />
-                    <StatItem
-                      label="완료율"
-                      value={stat.totalPlayed ? `${Math.round(stat.totalCompleted / stat.totalPlayed * 100)}%` : '-'}
-                    />
-                    <StatItem
-                      label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'}
-                      value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'}
-                    />
-                    <StatItem
-                      label="연속"
-                      value={stat.currentStreak > 0 ? `🔥${stat.currentStreak}일` : '-'}
-                    />
-                  </div>
-                </div>
-              </div>
+              <GameStatRow key={stat.game.id} stat={stat} />
             ))}
           </div>
         )}
@@ -304,6 +274,54 @@ function StatItem({ label, value }: { label: string; value: string }) {
     <div>
       <p className="text-xs text-gray-400 font-medium">{label}</p>
       <p className="text-sm font-black text-gray-900">{value}</p>
+    </div>
+  )
+}
+
+function GameStatRow({ stat }: { stat: GameStat }) {
+  const [expanded, setExpanded] = useState(false)
+  const completionRate = stat.totalPlayed
+    ? Math.round(stat.totalCompleted / stat.totalPlayed * 100)
+    : 0
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors active:bg-gray-100"
+      >
+        {/* 색상 인디케이터 — 둥근 바 */}
+        <div className="w-1 h-7 rounded-full shrink-0" style={{ backgroundColor: stat.game.color }} />
+
+        <div className="flex-1 flex items-center justify-between">
+          <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-base font-black tabular-nums" style={{ color: stat.game.color }}>
+              {stat.totalScore}
+              <span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
+            </span>
+            <ChevronDown
+              size={15}
+              className={cn('text-gray-300 transition-transform shrink-0', expanded && 'rotate-180')}
+            />
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="grid grid-cols-2 gap-y-3 gap-x-6 px-5 py-4 bg-gray-50/60 border-t border-gray-100">
+          <StatItem label="완료" value={`${stat.totalCompleted}회`} />
+          <StatItem label="완료율" value={stat.totalPlayed ? `${completionRate}%` : '-'} />
+          <StatItem
+            label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'}
+            value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'}
+          />
+          <StatItem
+            label="연속"
+            value={stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -359,10 +377,7 @@ function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games
         <div className="px-4 pb-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3">
           {record.results.map(r => (
             <div key={r.id} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <span>{r.game?.emoji}</span>
-                <span className="font-semibold text-gray-700">{r.game?.name}</span>
-              </div>
+              <span className="font-semibold text-gray-700">{r.game?.name}</span>
               <div className="flex items-center gap-2">
                 {r.completed ? (
                   <>

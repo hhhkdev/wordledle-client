@@ -48,6 +48,18 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
   },
 ]
 
+/**
+ * 게임별 현재 회차 시작 날짜 (YYYY-MM-DD)
+ * - wordle: 미국 동부 자정 기준 (America/New_York)
+ * - 나머지: 한국 자정 기준 (Asia/Seoul)
+ */
+export function getGameCurrentPeriodStart(slug: string): string {
+  if (slug === 'wordle') {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  }
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+}
+
 // ── 점수 계산 헬퍼 ──────────────────────────────────────────
 
 /**
