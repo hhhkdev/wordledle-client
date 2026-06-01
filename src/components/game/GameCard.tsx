@@ -27,7 +27,7 @@ function ResultStats({ game, result }: { game: Game; result: GameResult }) {
   const meta = result.metadata
   if (game.slug === 'kkomanttle') {
     return (
-      <div className="flex flex-wrap gap-1 mt-1.5">
+      <div className="flex flex-wrap gap-1">
         {result.attempts !== null && (
           <span className="flex items-center gap-1 bg-white/20 rounded-lg px-2 py-0.5 text-xs font-bold text-white">
             <Brain size={10} />{result.attempts}회
@@ -42,7 +42,7 @@ function ResultStats({ game, result }: { game: Game; result: GameResult }) {
     )
   }
   return (
-    <div className="flex items-center gap-1 mt-1.5">
+    <div className="flex items-center gap-1">
       {result.attempts !== null && (
         <span className="bg-white/20 rounded-lg px-2 py-0.5 text-xs font-bold text-white">
           {result.attempts}{result.max_attempts ? `/${result.max_attempts}` : ''}번
@@ -117,19 +117,17 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         )}
 
         {/* 일반 상태 - 항상 렌더링하여 카드 높이 유지 */}
-        <div className="relative z-10 flex flex-col flex-1 p-4 gap-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-base font-black text-white leading-tight">{game.name}</h3>
-              <p className="text-xs text-white/70 mt-0.5">{game.description}</p>
-            </div>
-          </div>
-
-          {hasResult && result && <ResultStats game={game} result={result} />}
+        <div className="relative z-10 flex flex-col flex-1 p-4">
+          <h3 className="text-lg font-black text-white leading-tight">{game.name}</h3>
+          <p className="text-sm text-white/70 mt-0.5">{game.description}</p>
 
           <div className="flex-1" />
 
-          <div className="flex justify-end mt-1">
+          {/* 하단 행: 결과 통계 + 화살표 */}
+          <div className="flex items-center justify-between mt-2">
+            {hasResult && result
+              ? <ResultStats game={game} result={result} />
+              : <div />}
             <ChevronRight size={16} className="text-white/40" />
           </div>
         </div>
