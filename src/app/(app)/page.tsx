@@ -129,14 +129,23 @@ export default function HomePage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {games.map(game => (
-            <GameCard
-              key={game.id}
-              game={game}
-              result={results[game.id] ?? null}
-              onResultChange={r => setResults(prev => ({ ...prev, [r.game_id]: r }))}
-            />
-          ))}
+          {[...games]
+            .sort((a, b) => {
+              // 로그인 유저: 결과 입력한 게임은 하단
+              if (!user) return 0
+              const aHas = !!results[a.id]
+              const bHas = !!results[b.id]
+              if (aHas === bHas) return 0
+              return aHas ? 1 : -1
+            })
+            .map(game => (
+              <GameCard
+                key={game.id}
+                game={game}
+                result={results[game.id] ?? null}
+                onResultChange={r => setResults(prev => ({ ...prev, [r.game_id]: r }))}
+              />
+            ))}
         </div>
       )}
 

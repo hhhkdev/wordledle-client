@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Plus, Edit3, XCircle, Flame, Clock, Brain, ArrowUpRight } from 'lucide-react'
+import { CheckCircle2, Edit3, XCircle, Flame, Clock, Brain, ExternalLink, Plus, X } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import ResultModal from './ResultModal'
@@ -59,26 +59,38 @@ function ResultStats({ game, result }: { game: Game; result: GameResult }) {
 
 export default function GameCard({ game, result, onResultChange }: GameCardProps) {
   const { user } = useAuth()
+  const [showChoice, setShowChoice] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
 
   const hasResult = !!result
   const completed = result?.completed
   const hasImage = !!game.image_url
-  // 로그인한 유저가 아직 결과를 입력하지 않은 경우만 그레이스케일
-  const dimmed = !!user && !hasResult
+
+  // 결과 입력한 카드는 그레이스케일 (로그인 유저 한정)
+  const dimmed = !!user && hasResult
+
+  // 선택지 오버레이 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!showChoice) return
+    const timer = setTimeout(() => {
+      const close = () => setShowChoice(false)
+      document.addEventListener('click', close, { once: true })
+      return () => document.removeEventListener('click', close)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [showChoice])
 
   return (
     <>
-      <Link
-        href={game.url}
-        target="_blank"
-        rel="noopener noreferrer"
+      <div
         className={cn(
-          'relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200',
-          'hover:shadow-xl hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+          'relative flex flex-col rounded-2xl overflow-hidden cursor-pointer',
+          'transition-all duration-200',
           hasImage ? 'aspect-4/3' : '',
-          dimmed && 'grayscale opacity-75 hover:grayscale-0 hover:opacity-100'
+          dimmed && !showChoice && 'grayscale opacity-70',
+          !showChoice && 'hover:shadow-lg hover:-translate-y-0.5'
         )}
+        onClick={() => setShowChoice(true)}
       >
         {/* 배경 */}
         {hasImage ? (
@@ -96,7 +108,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         )}
 
         {/* 완료 뱃지 */}
-        {hasResult && (
+        {hasResult && !showChoice && (
           <div className="absolute top-2.5 right-2.5 z-10">
             {completed
               ? <CheckCircle2 size={18} className="text-white drop-shadow" />
@@ -104,45 +116,63 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           </div>
         )}
 
-        {/* 콘텐츠 */}
-        <div className="relative z-10 flex flex-col flex-1 p-4 gap-1">
-          {/* 게임명 + 게임하기 표시 */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-base font-black text-white leading-tight">{game.name}</h3>
-              <p className="text-xs text-white/70 mt-0.5">{game.description}</p>
-            </div>
-            {/* 게임하기 힌트 (미완료 또는 비로그인 시) */}
-            {!hasResult && (
-              <span className="shrink-0 flex items-center gap-0.5 bg-white/20 text-white text-xs font-semibold px-2 py-1 rounded-lg mt-0.5">
-                게임하기 <ArrowUpRight size={11} />
-              </span>
-            )}
-          </div>
-
-          {/* 결과 stats */}
-          {hasResult && result && <ResultStats game={game} result={result} />}
-
-          <div className="flex-1" />
-
-          {/* 결과 입력 버튼 */}
-          {user && (
+        {/* 선택지 오버레이 */}
+        {showChoice ? (
+          <div
+            className="absolute inset-0 z-20 flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* 닫기 버튼 */}
             <button
-              type="button"
-              onClick={e => { e.preventDefault(); e.stopPropagation(); setModalOpen(true) }}
-              className={cn(
-                'mt-2 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl text-sm font-bold transition-colors',
-                hasResult
-                  ? 'bg-white/15 hover:bg-white/25 text-white'
-                  : 'bg-white text-gray-900 hover:bg-white/90'
-              )}
+              onClick={() => setShowChoice(false)}
+              className="absolute top-2 right-2 z-30 p-1 rounded-full bg-black/30 text-white/80 hover:bg-black/50 hover:text-white transition-colors"
             >
-              {hasResult ? <Edit3 size={13} /> : <Plus size={13} />}
-              {hasResult ? '결과 수정' : '결과 입력'}
+              <X size={14} />
             </button>
-          )}
-        </div>
-      </Link>
+
+            {/* 게임하기 */}
+            <Link
+              href={game.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 bg-black/50 hover:bg-black/40 transition-colors"
+              onClick={() => setShowChoice(false)}
+            >
+              <ExternalLink size={16} className="text-white" />
+              <span className="text-white font-black text-sm">게임하기</span>
+            </Link>
+
+            <div className="h-px bg-white/20 shrink-0" />
+
+            {/* 결과 입력 */}
+            <button
+              className="flex-1 flex items-center justify-center gap-2 bg-black/50 hover:bg-black/40 transition-colors"
+              onClick={() => { setShowChoice(false); setModalOpen(true) }}
+            >
+              {hasResult ? <Edit3 size={16} className="text-white" /> : <Plus size={16} className="text-white" />}
+              <span className="text-white font-black text-sm">
+                {hasResult ? '결과 수정' : '결과 입력'}
+              </span>
+            </button>
+          </div>
+        ) : (
+          /* 일반 상태 */
+          <div className="relative z-10 flex flex-col flex-1 p-4 gap-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h3 className="text-base font-black text-white leading-tight">{game.name}</h3>
+                <p className="text-xs text-white/70 mt-0.5">{game.description}</p>
+              </div>
+            </div>
+
+            {hasResult && result && <ResultStats game={game} result={result} />}
+
+            <div className="flex-1" />
+
+            <p className="text-xs text-white/40 text-right mt-1">탭하여 선택</p>
+          </div>
+        )}
+      </div>
 
       {user && (
         <ResultModal
