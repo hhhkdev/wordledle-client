@@ -102,6 +102,7 @@ export default function RankingPage() {
   const [sortKey, setSortKey] = useState<SortKey>('completed')
   const [globalEntries, setGlobalEntries] = useState<RankingEntry[]>([])
   const [friendEntries, setFriendEntries] = useState<RankingEntry[]>([])
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -127,7 +128,9 @@ export default function RankingPage() {
 
       if (user) {
         const { data: friendsData } = await supabase.from('friends').select('friend_id').eq('user_id', user.id)
-        const allIds = [user.id, ...(friendsData ?? []).map(f => f.friend_id)]
+        const friendIdList = (friendsData ?? []).map(f => f.friend_id)
+        if (!cancelled) setFriendIds(new Set(friendIdList))
+        const allIds = [user.id, ...friendIdList]
         let fq = supabase.from('results').select('*, user:users(id, nickname, created_at)').in('user_id', allIds)
         if (range?.gte) fq = fq.gte('date', range.gte)
         if (range?.lte) fq = fq.lte('date', range.lte)
@@ -237,6 +240,14 @@ export default function RankingPage() {
           currentUserId={user?.id}
           isKkomanttle={isKkomanttle}
           showDots={appliedFilter.selectedGame === 'all' && !isKkomanttle}
+          friendIds={friendIds}
+          onFriendChange={(userId, added) =>
+            setFriendIds(prev => {
+              const next = new Set(prev)
+              added ? next.add(userId) : next.delete(userId)
+              return next
+            })
+          }
         />
       )}
 

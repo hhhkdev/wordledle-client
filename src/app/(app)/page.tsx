@@ -7,7 +7,7 @@ import { Game, GameResult, User } from '@/types'
 import GameCard from '@/components/game/GameCard'
 import Announcements from '@/components/Announcements'
 import Link from 'next/link'
-import { LogIn, Trophy, ChevronRight } from 'lucide-react'
+import { Trophy, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameCurrentPeriodStart } from '@/lib/games'
 
@@ -119,9 +119,6 @@ export default function HomePage() {
       })
   }, [])
 
-  const wordleGame = games.find(g => g.slug === 'wordle')
-  const otherGames = games.filter(g => g.slug !== 'wordle')
-
   const completedCount = Object.values(currentResults).filter(r => r.completed).length
   const totalGames = games.length
 
@@ -129,7 +126,7 @@ export default function HomePage() {
     month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul',
   })
 
-  const sortedOtherGames = [...otherGames].sort((a, b) => {
+  const sortedGames = [...games].sort((a, b) => {
     if (!user) return 0
     const aHas = !!currentResults[a.id]
     const bHas = !!currentResults[b.id]
@@ -149,21 +146,7 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 로그인 유도 */}
-      {!authLoading && !user && (
-        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 mb-5 shadow-sm">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-800">결과를 기록하고 친구들과 경쟁해보세요</p>
-            <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">로그인하면 랭킹과 친구 기능을 이용할 수 있어요</p>
-          </div>
-          <Link href="/login" className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl active:bg-gray-700 transition-colors">
-            <LogIn size={14} />
-            <span className="hidden sm:inline">로그인</span>
-          </Link>
-        </div>
-      )}
-
-      {user && totalGames > 0 && completedCount === totalGames && (
+{user && totalGames > 0 && completedCount === totalGames && (
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-2xl p-3 mb-5">
           <span className="text-lg">🎉</span>
           <p className="text-sm font-bold text-green-800">오늘 모든 게임을 완료했어요!</p>
@@ -172,37 +155,21 @@ export default function HomePage() {
 
       {/* 게임 목록 */}
       {loadingGames ? (
-        <div className="flex flex-col gap-3">
-          <div className="h-48 rounded-2xl bg-gray-200 animate-pulse" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-36 rounded-2xl bg-gray-200 animate-pulse" />
-            ))}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded-2xl bg-gray-200 animate-pulse" />
+          ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {/* Wordle — 단독 피처드 카드 */}
-          {wordleGame && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {sortedGames.map(game => (
             <GameCard
-              game={wordleGame}
-              result={currentResults[wordleGame.id] ?? null}
+              key={game.id}
+              game={game}
+              result={currentResults[game.id] ?? null}
               onResultChange={r => setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))}
-              featured
             />
-          )}
-
-          {/* 나머지 게임 2열 그리드 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {sortedOtherGames.map(game => (
-              <GameCard
-                key={game.id}
-                game={game}
-                result={currentResults[game.id] ?? null}
-                onResultChange={r => setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))}
-              />
-            ))}
-          </div>
+          ))}
         </div>
       )}
 

@@ -288,12 +288,12 @@ function GameStatRow({ stat }: { stat: GameStat }) {
     <div>
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-stretch hover:bg-gray-50 transition-colors active:bg-gray-100"
+        className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors active:bg-gray-100"
       >
-        {/* 좌측 색상 바 */}
-        <div className="w-1.5 shrink-0" style={{ backgroundColor: stat.game.color }} />
+        {/* 색상 인디케이터 — 둥근 바 */}
+        <div className="w-1 h-7 rounded-full shrink-0" style={{ backgroundColor: stat.game.color }} />
 
-        <div className="flex-1 flex items-center justify-between px-4 py-3.5">
+        <div className="flex-1 flex items-center justify-between">
           <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
           <div className="flex items-center gap-3">
             <span className="text-base font-black tabular-nums" style={{ color: stat.game.color }}>
