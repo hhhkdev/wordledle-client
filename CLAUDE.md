@@ -25,22 +25,50 @@ pnpm tsc --noEmit  # TypeScript 타입 체크
 ### 데이터베이스 (Supabase)
 테이블:
 - `users`: id, nickname (unique), password_hash, created_at
-- `games`: id, name, slug, url, description, emoji, color, result_format
-- `results`: id, user_id, game_id, date, raw_result, score, attempts, max_attempts, completed — unique(user_id, game_id, date)
+- `games`: id, name, slug, url, description, emoji, color, result_format, image_url
+- `results`: id, user_id, game_id, date, puzzle_number, raw_result, score, attempts, max_attempts, completed, metadata — unique(user_id, game_id, date)
 - `friends`: id, user_id, friend_id — unique(user_id, friend_id)
 
 스키마 파일: `supabase/schema.sql`
 
 ### 게임 결과 파싱
 `src/lib/games.ts`의 `parseGameResult(gameSlug, rawText)` 함수로 게임별 공유 텍스트를 파싱.
-반환값: `{ score, attempts, max_attempts, completed }`
+반환값: `{ score, attempts, max_attempts, completed, metadata }`
 
-현재 지원 slug: `wordle`, `kkodle`, `connections`, `quordle`, `framed`, `mini-crossword`
+현재 지원 slug: `wordle`, `kkodle`, `kkooooodle`, `kkomanttle`
 
 새 게임 추가 시:
 1. `GAMES` 배열에 게임 정보 추가
 2. `parseGameResult`에 slug별 파싱 로직 추가
 3. Supabase DB에 seed 추가 (`supabase/schema.sql` 하단 참고)
+
+### 점수 체계
+
+점수 계산은 `src/lib/games.ts`의 `scoreCleared(attempts, maxAttempts, basePoints)` 함수로 처리.
+
+| 게임 | 기본 점수 | 시도 보너스 | 최소 | 최대 | 실패 |
+|------|-----------|-------------|------|------|------|
+| Wordle | 10점 | +1점/절약한 시도 (max 6) | 10점 | 15점 | 0점 |
+| 꼬들 | 10점 | +1점/절약한 시도 (max 6) | 10점 | 15점 | 0점 |
+| 꼬오오오오들 | 20점 | +1점/절약한 시도 (max 6) | 20점 | 25점 | 0점 |
+| 꼬맨틀 | 20점 | 없음 (시도 무제한) | — | 20점 | 0점 |
+
+**예시**: 꼬들을 4번 만에 클리어 → 10 + (6−4) = **12점**
+
+**4게임 전체 최대**: 15 + 15 + 25 + 20 = **75점**
+
+랭킹은 누적 점수 기준. 꼬맨틀 단독 랭킹은 총 추측 횟수 오름차순(적을수록 상위).
+
+### 게임별 초기화 시간
+
+| 게임 | 초기화 | 비고 |
+|------|--------|------|
+| Wordle | 자정 (현지 시각) | 회차 번호로 식별 (#1806 등) |
+| 꼬들 | 자정 KST | 날짜 기준 |
+| 꼬오오오오들 | 자정 KST | 날짜 기준 |
+| 꼬맨틀 | 자정 KST | 날짜 기준 |
+
+홈 화면 "이번 회차 랭킹"에서 Wordle은 회차 번호, 한국 게임은 날짜로 표시.
 
 ### 디자인 원칙
 - Toss UX 정신: 단순하고 명확한 UI, 불필요한 요소 제거

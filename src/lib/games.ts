@@ -41,23 +41,13 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
 
 // ── 점수 계산 헬퍼 ──────────────────────────────────────────
 
-/** Wordle-style: 최대 시도 - 시도 횟수 + 1 (실패 = 0) */
-function scoreWordleStyle(attempts: number | null, maxAttempts: number): number {
-  if (attempts === null) return 0
-  return Math.max(0, maxAttempts - attempts + 1)
-}
-
 /**
- * 꼬맨틀: 추측 횟수 구간별 점수
- * 의미론적 검색이라 적은 횟수일수록 실력자
+ * 클리어 점수: 기본 점수 + 절약한 시도 수 (실패 시 0)
+ * 절약한 시도 = max_attempts - attempts
  */
-function scoreKkomanttle(attempts: number): number {
-  if (attempts <= 10) return 6
-  if (attempts <= 25) return 5
-  if (attempts <= 50) return 4
-  if (attempts <= 100) return 3
-  if (attempts <= 200) return 2
-  return 1
+function scoreCleared(attempts: number | null, maxAttempts: number, basePoints: number): number {
+  if (attempts === null) return 0
+  return basePoints + (maxAttempts - attempts)
 }
 
 // ── 파서 ─────────────────────────────────────────────────────
@@ -76,7 +66,7 @@ export function parseGameResult(
       const attempts = match[1] === 'X' ? null : parseInt(match[1])
       const puzzleMatch = text.match(/Wordle\s+([\d,]+)/)
       return {
-        score: scoreWordleStyle(attempts, 6),
+        score: scoreCleared(attempts, 6, 10),
         attempts,
         max_attempts: 6,
         completed: match[1] !== 'X',
@@ -93,7 +83,7 @@ export function parseGameResult(
       const attempts = match[2] === 'X' ? null : parseInt(match[2])
       const streakMatch = text.match(/🔥(\d+)/)
       return {
-        score: scoreWordleStyle(attempts, 6),
+        score: scoreCleared(attempts, 6, 10),
         attempts,
         max_attempts: 6,
         completed: match[2] !== 'X',
@@ -110,7 +100,7 @@ export function parseGameResult(
       if (!match) return null
       const attempts = match[2] === 'X' ? null : parseInt(match[2])
       return {
-        score: scoreWordleStyle(attempts, 6),
+        score: scoreCleared(attempts, 6, 20),
         attempts,
         max_attempts: 6,
         completed: match[2] !== 'X',
@@ -136,7 +126,7 @@ export function parseGameResult(
         : null
 
       return {
-        score: attempts !== null ? scoreKkomanttle(attempts) : 0,
+        score: completed ? 20 : 0,
         attempts,
         max_attempts: null,
         completed,
