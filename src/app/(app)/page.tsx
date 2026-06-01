@@ -130,7 +130,7 @@ export default function HomePage() {
             <p className="text-sm font-semibold text-gray-800">결과를 기록하고 친구들과 경쟁해보세요</p>
             <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">로그인하면 랭킹과 친구 기능을 이용할 수 있어요</p>
           </div>
-          <Link href="/login" className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
+          <Link href="/login" className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 text-white text-sm font-bold rounded-xl active:bg-gray-700 transition-colors">
             <LogIn size={14} />
             <span className="hidden sm:inline">로그인</span>
           </Link>
@@ -189,7 +189,14 @@ export default function HomePage() {
             {currentRounds
               .map(r => {
                 const g = games.find(g => g.id === r.gameId)
-                return g ? `${g.emoji} #${r.puzzleNumber}` : null
+                if (!g) return null
+                // 한국 게임은 자정 기준 초기화 → 날짜 표시, 해외 게임은 회차 번호
+                const isKorean = g.slug !== 'wordle'
+                if (isKorean) {
+                  const dateStr = new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+                  return `${g.emoji} ${dateStr}`
+                }
+                return `${g.emoji} #${r.puzzleNumber}`
               })
               .filter(Boolean)
               .join(' · ')}

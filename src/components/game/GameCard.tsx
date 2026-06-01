@@ -88,7 +88,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           'transition-all duration-200',
           hasImage ? 'aspect-4/3' : '',
           dimmed && !showChoice && 'grayscale opacity-70',
-          !showChoice && 'hover:shadow-lg hover:-translate-y-0.5'
+          !showChoice && 'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'
         )}
         onClick={() => setShowChoice(true)}
       >
@@ -129,11 +129,9 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
           <div className="flex-1" />
 
-          {!showChoice && (
-            <div className="flex justify-end mt-1">
-              <ChevronRight size={16} className="text-white/40" />
-            </div>
-          )}
+          <div className="flex justify-end mt-1">
+            <ChevronRight size={16} className="text-white/40" />
+          </div>
         </div>
 
         {/* 선택지 오버레이 */}
@@ -145,7 +143,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
             {/* 닫기 버튼 */}
             <button
               onClick={() => setShowChoice(false)}
-              className="absolute top-2 right-2 z-30 p-1 rounded-full bg-black/30 text-white/80 hover:bg-black/50 hover:text-white transition-colors"
+              className="absolute top-2 right-2 z-30 w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white/80 active:bg-black/60 transition-colors"
             >
               <X size={14} />
             </button>
@@ -155,7 +153,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
               href={game.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-2 bg-black/50 hover:bg-black/40 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-black/50 active:bg-black/70 transition-colors"
               onClick={() => setShowChoice(false)}
             >
               <ExternalLink size={16} className="text-white" />
@@ -166,7 +164,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
 
             {/* 결과 입력 */}
             <button
-              className="flex-1 flex items-center justify-center gap-2 bg-black/50 hover:bg-black/40 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-black/50 active:bg-black/70 transition-colors"
               onClick={() => { setShowChoice(false); setModalOpen(true) }}
             >
               {hasResult ? <Edit3 size={16} className="text-white" /> : <Plus size={16} className="text-white" />}

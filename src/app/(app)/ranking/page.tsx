@@ -9,25 +9,14 @@ import { Users, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Tab = 'global' | 'friends'
+type SortKey = 'completed' | 'score'
 
 interface RankingEntry {
   user: User
   results: GameResult[]
   totalScore: number
   completedCount: number
-  primaryStat: number | null  // game-specific: attempts for kkomanttle, score otherwise
-}
-
-function filterToLatestRounds(results: GameResult[]): GameResult[] {
-  const latestByGame = new Map<string, number>()
-  for (const r of results) {
-    if (r.puzzle_number == null) continue
-    const cur = latestByGame.get(r.game_id) ?? 0
-    if (r.puzzle_number > cur) latestByGame.set(r.game_id, r.puzzle_number)
-  }
-  return results.filter(r =>
-    r.puzzle_number != null && latestByGame.get(r.game_id) === r.puzzle_number
-  )
+  primaryStat: number | null
 }
 
 function buildEntries(resultsData: (GameResult & { user: User })[]) {
@@ -46,20 +35,19 @@ function buildEntries(resultsData: (GameResult & { user: User })[]) {
   return entriesMap
 }
 
-function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null) {
-  // 꼬맨틀 단독 선택 시: 시도 횟수 오름차순 (적을수록 잘한 것)
+function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null, sortKey: SortKey) {
+  // 꼬맨틀 단독 선택: 총 시도 횟수 오름차순 (적을수록 잘한 것)
   if (selectedGameSlug === 'kkomanttle') {
     return [...entries].sort((a, b) => {
-      const aAttempts = a.results[0]?.attempts ?? Infinity
-      const bAttempts = b.results[0]?.attempts ?? Infinity
-      if (aAttempts !== bAttempts) return aAttempts - bAttempts
-      // 동점 시 소요 시간 오름차순
-      const aTime = (a.results[0]?.metadata as { time_seconds?: number })?.time_seconds ?? Infinity
-      const bTime = (b.results[0]?.metadata as { time_seconds?: number })?.time_seconds ?? Infinity
-      return aTime - bTime
+      const aAttempts = a.results.reduce((sum, r) => sum + (r.attempts ?? 0), 0)
+      const bAttempts = b.results.reduce((sum, r) => sum + (r.attempts ?? 0), 0)
+      return aAttempts - bAttempts
     })
   }
-  // 나머지: 완료 수 내림차순 → 점수 내림차순
+  if (sortKey === 'score') {
+    return [...entries].sort((a, b) => b.totalScore - a.totalScore)
+  }
+  // 완료순 (기본): 완료 횟수 내림차순 → 점수 내림차순
   return [...entries].sort((a, b) =>
     b.completedCount !== a.completedCount
       ? b.completedCount - a.completedCount
@@ -70,6 +58,7 @@ function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null) {
 export default function RankingPage() {
   const { user } = useAuth()
   const [tab, setTab] = useState<Tab>('global')
+  const [sortKey, setSortKey] = useState<SortKey>('completed')
   const [games, setGames] = useState<Game[]>([])
   const [selectedGame, setSelectedGame] = useState<string>('all')
   const [globalEntries, setGlobalEntries] = useState<RankingEntry[]>([])
@@ -83,17 +72,13 @@ export default function RankingPage() {
       const { data: gamesData } = await supabase.from('games').select('*').order('name')
       if (gamesData) setGames(gamesData as Game[])
 
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data: resultsData } = await supabase
         .from('results')
         .select('*, user:users(id, nickname, created_at)')
-        .gte('date', sevenDaysAgo)
-        .not('puzzle_number', 'is', null)
 
       if (resultsData) {
-        const filtered = filterToLatestRounds(resultsData as GameResult[])
-        const entriesMap = buildEntries(filtered as (GameResult & { user: User })[])
-        setGlobalEntries(sortEntries(Array.from(entriesMap.values()), null))
+        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        setGlobalEntries(Array.from(entriesMap.values()))
       }
       setLoading(false)
     }
@@ -114,18 +99,14 @@ export default function RankingPage() {
       const friendIds = (friendsData ?? []).map(f => f.friend_id)
       const allIds = [user!.id, ...friendIds]
 
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       const { data: resultsData } = await supabase
         .from('results')
         .select('*, user:users(id, nickname, created_at)')
-        .gte('date', sevenDaysAgo)
-        .not('puzzle_number', 'is', null)
         .in('user_id', allIds)
 
       if (resultsData) {
-        const filtered = filterToLatestRounds(resultsData as GameResult[])
-        const entriesMap = buildEntries(filtered as (GameResult & { user: User })[])
-        setFriendEntries(sortEntries(Array.from(entriesMap.values()), null))
+        const entriesMap = buildEntries(resultsData as (GameResult & { user: User })[])
+        setFriendEntries(Array.from(entriesMap.values()))
       }
     }
     loadFriends()
@@ -133,9 +114,10 @@ export default function RankingPage() {
 
   const selectedGameObj = games.find(g => g.id === selectedGame)
   const selectedGameSlug = selectedGameObj?.slug ?? null
+  const isKkomanttle = selectedGameSlug === 'kkomanttle'
 
   function filterByGame(entries: RankingEntry[]): RankingEntry[] {
-    if (selectedGame === 'all') return sortEntries(entries, null)
+    if (selectedGame === 'all') return sortEntries(entries, null, sortKey)
 
     const filtered = entries
       .map(e => {
@@ -146,28 +128,27 @@ export default function RankingPage() {
       })
       .filter(e => e.results.length > 0)
 
-    return sortEntries(filtered, selectedGameSlug)
+    return sortEntries(filtered, selectedGameSlug, sortKey)
   }
 
   const shownEntries = tab === 'global' ? filterByGame(globalEntries) : filterByGame(friendEntries)
-  const isKkomanttle = selectedGameSlug === 'kkomanttle'
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">랭킹</h1>
-        <p className="text-sm text-gray-500 mt-1">이번 회차 기준</p>
+        <p className="text-sm text-gray-500 mt-1">누적 랭킹</p>
       </div>
 
       {/* Game filter chips */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-5">
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-4 -mx-4 px-4">
         <button
           onClick={() => setSelectedGame('all')}
           className={cn(
-            'shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors',
+            'shrink-0 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:opacity-70',
             selectedGame === 'all'
               ? 'bg-gray-900 text-white'
-              : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+              : 'bg-white border border-gray-200 text-gray-600'
           )}
         >
           전체
@@ -177,10 +158,10 @@ export default function RankingPage() {
             key={g.id}
             onClick={() => setSelectedGame(g.id)}
             className={cn(
-              'shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors',
+              'shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors active:opacity-70',
               selectedGame === g.id
                 ? 'text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
+                : 'bg-white border border-gray-200 text-gray-600'
             )}
             style={selectedGame === g.id ? { backgroundColor: g.color } : undefined}
           >
@@ -190,12 +171,12 @@ export default function RankingPage() {
       </div>
 
       {/* Tab switch */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-5 w-fit">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit mb-3">
         <button
           onClick={() => setTab('global')}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors',
-            tab === 'global' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors active:opacity-70',
+            tab === 'global' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           )}
         >
           <Globe size={15} />
@@ -205,8 +186,8 @@ export default function RankingPage() {
           onClick={() => setTab('friends')}
           disabled={!user}
           className={cn(
-            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed',
-            tab === 'friends' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            'flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-colors active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed',
+            tab === 'friends' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           )}
         >
           <Users size={15} />
@@ -214,10 +195,33 @@ export default function RankingPage() {
         </button>
       </div>
 
-      {/* 꼬맨틀 정렬 안내 */}
-      {isKkomanttle && (
-        <p className="text-xs text-gray-400 mb-3">추측 횟수 오름차순 · 동점 시 소요 시간 기준</p>
-      )}
+      {/* 정렬 토글 / 꼬맨틀 안내 */}
+      <div className="mb-5">
+        {isKkomanttle ? (
+          <p className="text-xs text-gray-400 py-1">총 추측 횟수 오름차순</p>
+        ) : (
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            <button
+              onClick={() => setSortKey('completed')}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-semibold transition-colors active:opacity-70',
+                sortKey === 'completed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              )}
+            >
+              완료순
+            </button>
+            <button
+              onClick={() => setSortKey('score')}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-semibold transition-colors active:opacity-70',
+                sortKey === 'score' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              )}
+            >
+              점수순
+            </button>
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <div className="flex flex-col gap-2">
