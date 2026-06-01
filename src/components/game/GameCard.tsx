@@ -116,8 +116,24 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
           </div>
         )}
 
+        {/* 일반 상태 - 항상 렌더링하여 카드 높이 유지 */}
+        <div className="relative z-10 flex flex-col flex-1 p-4 gap-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-base font-black text-white leading-tight">{game.name}</h3>
+              <p className="text-xs text-white/70 mt-0.5">{game.description}</p>
+            </div>
+          </div>
+
+          {hasResult && result && <ResultStats game={game} result={result} />}
+
+          <div className="flex-1" />
+
+          {!showChoice && <p className="text-xs text-white/40 text-right mt-1">탭하여 선택</p>}
+        </div>
+
         {/* 선택지 오버레이 */}
-        {showChoice ? (
+        {showChoice && (
           <div
             className="absolute inset-0 z-20 flex flex-col"
             onClick={e => e.stopPropagation()}
@@ -154,22 +170,6 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
                 {hasResult ? '결과 수정' : '결과 입력'}
               </span>
             </button>
-          </div>
-        ) : (
-          /* 일반 상태 */
-          <div className="relative z-10 flex flex-col flex-1 p-4 gap-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="text-base font-black text-white leading-tight">{game.name}</h3>
-                <p className="text-xs text-white/70 mt-0.5">{game.description}</p>
-              </div>
-            </div>
-
-            {hasResult && result && <ResultStats game={game} result={result} />}
-
-            <div className="flex-1" />
-
-            <p className="text-xs text-white/40 text-right mt-1">탭하여 선택</p>
           </div>
         )}
       </div>
