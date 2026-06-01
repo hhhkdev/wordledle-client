@@ -86,7 +86,7 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`${game.emoji} ${game.name} 결과 입력`}>
+    <Modal open={open} onClose={onClose} title={`${game.name} 결과 입력`}>
       <p className="text-sm text-gray-500 mb-3">
         게임 결과 공유 텍스트를 그대로 붙여넣어 주세요.
       </p>
