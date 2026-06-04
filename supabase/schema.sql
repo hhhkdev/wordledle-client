@@ -91,6 +91,30 @@ values
     'https://semantle-ko.newsjel.ly',
     '단어 유사도로 정답 찾기', '🧠', '#8e44ad',
     'N번째 꼬맨틀을 풀었습니다!', null
+  ),
+  (
+    '카카오 오늘의 단어', 'kakao-word',
+    '',
+    '카카오톡 미니게임 — 결과 입력 전용', '💬', '#C49A00',
+    '오늘의 단어 맞히기 성공!', null
+  ),
+  (
+    'Word Hurdle 4-letter', 'wordhurdle-4',
+    'https://solitaired.com/wordhurdle-4-letter',
+    '4글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 4-letter 3201 4/6 #wordhurdle', null
+  ),
+  (
+    'Word Hurdle 5-letter', 'wordhurdle-5',
+    'https://solitaired.com/wordhurdle-5-letter',
+    '5글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 5-letter 3201 3/6 #wordhurdle', null
+  ),
+  (
+    'Word Hurdle', 'wordhurdle-6',
+    'https://solitaired.com/wordhurdle',
+    '6글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 3201 5/6 #wordhurdle', null
   );
 
 -- ── Row Level Security ──────────────────────────────────────────

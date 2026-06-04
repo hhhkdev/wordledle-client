@@ -1,5 +1,10 @@
 import { Game, ParsedResult } from '@/types'
 
+export function getGameImageUrl(slug: string, override?: string | null): string {
+  if (override) return override
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/game-images/${slug}.webp`
+}
+
 export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
   {
     name: 'Wordle',
@@ -44,7 +49,34 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     description: '카카오톡 미니게임 — 결과 입력 전용',
     emoji: '💬',
     color: '#C49A00',
-    result_format: '오늘의 단어 맞히기 성공!\n\n⬛🟨⬛⬛⬛\n🟩🟩🟩🟩🟩',
+    result_format: '오늘의 단어 맞히기 성공!\n\n⬛🟨⬛⬛⬛\n🟩🟩🟩🟩🟩\n또는\n2026년 6월 5일\n🎉 425번째 정답자입니다!\n\n🟫🟫🟫🟫🟫\n🟩🟩🟩🟩🟩',
+  },
+  {
+    name: 'Word Hurdle 4-letter',
+    slug: 'wordhurdle-4',
+    url: 'https://solitaired.com/wordhurdle-4-letter',
+    description: '4글자 영단어 맞추기',
+    emoji: '💙',
+    color: '#1A73E8',
+    result_format: 'Word Hurdle 4-letter 3201 4/6 #wordhurdle\n🤍🤍🤍💛\n💙🤍🤍🤍\n💙💙💙💙',
+  },
+  {
+    name: 'Word Hurdle 5-letter',
+    slug: 'wordhurdle-5',
+    url: 'https://solitaired.com/wordhurdle-5-letter',
+    description: '5글자 영단어 맞추기',
+    emoji: '💙',
+    color: '#1A73E8',
+    result_format: 'Word Hurdle 5-letter 3201 3/6 #wordhurdle\n💙🤍🤍🤍🤍\n🤍💙💙💙💙\n💙💙💙💙💙',
+  },
+  {
+    name: 'Word Hurdle',
+    slug: 'wordhurdle-6',
+    url: 'https://solitaired.com/wordhurdle',
+    description: '6글자 영단어 맞추기',
+    emoji: '💙',
+    color: '#1A73E8',
+    result_format: 'Word Hurdle 3201 5/6 #wordhurdle\n💛💛💛🤍🤍🤍\n💙💙💙💙💙💙',
   },
 ]
 
@@ -160,23 +192,68 @@ export function parseGameResult(
     }
 
     case 'kakao-word': {
-      // 한국어: "오늘의 단어 맞히기 성공!" / 영어: "Today's Word Guess: Success"
-      const completed =
-        text.includes('성공') ||
-        text.toLowerCase().includes('success')
-      if (!text.includes('오늘의 단어') && !text.toLowerCase().includes("today's word")) return null
+      // 포맷 A: "오늘의 단어 맞히기 성공!" (기존)
+      // 포맷 B: "N번째 정답자입니다!" (빠른 풀이 보너스 +5점)
+      const isFormatA = text.includes('오늘의 단어') || text.toLowerCase().includes("today's word")
+      const earlyMatch = text.match(/(\d+)번째\s*정답자입니다/)
+      const isFormatB = !!earlyMatch
+      if (!isFormatA && !isFormatB) return null
 
-      // 이모지 행(⬛🟨🟩로만 구성된 줄) 개수로 시도 횟수 산출
-      const emojiRowPattern = /^[⬛🟨🟩]+$/
+      const completed = isFormatB
+        ? true
+        : text.includes('성공') || text.toLowerCase().includes('success')
+
+      // 이모지 행(⬛🟨🟩🟫로만 구성된 줄) 개수로 시도 횟수 산출
+      const emojiRowPattern = /^[⬛🟨🟩🟫]+$/
       const emojiRows = text.split('\n').filter(l => emojiRowPattern.test(l.trim()))
       const attempts = emojiRows.length > 0 ? emojiRows.length : null
 
+      const bonus = isFormatB ? 5 : 0
       return {
-        score: scoreCleared(attempts, 6, 10),
+        score: scoreCleared(attempts, 6, 10) + bonus,
         attempts,
         max_attempts: 6,
         completed,
-        metadata: { puzzle_number: null },
+        metadata: {
+          puzzle_number: null,
+          early_solver_rank: earlyMatch ? parseInt(earlyMatch[1]) : null,
+        },
+      }
+    }
+
+    case 'wordhurdle-6': {
+      // "Word Hurdle 3201 5/6 #wordhurdle" (6-letter, no size prefix)
+      const wh6Match = text.match(/Word\s+Hurdle\s+(\d+)\s+(\d+)\/(\d+)/i)
+      if (!wh6Match) return null
+      const puzzleNumber = parseInt(wh6Match[1])
+      const attempts = parseInt(wh6Match[2])
+      const maxAttempts = parseInt(wh6Match[3])
+      const completed = attempts <= maxAttempts
+      return {
+        score: completed ? scoreCleared(attempts, maxAttempts, 10) : 0,
+        attempts,
+        max_attempts: maxAttempts,
+        completed,
+        metadata: { puzzle_number: puzzleNumber },
+      }
+    }
+
+    case 'wordhurdle-4':
+    case 'wordhurdle-5': {
+      // "Word Hurdle 4-letter 3201 4/6 #wordhurdle"
+      const whMatch = text.match(/Word\s+Hurdle\s+\d+-letter\s+(\d+)\s+(\d+)\/(\d+)/i)
+      if (!whMatch) return null
+      const puzzleNumber = parseInt(whMatch[1])
+      const attempts = parseInt(whMatch[2])
+      const maxAttempts = parseInt(whMatch[3])
+      const completed = attempts <= maxAttempts
+
+      return {
+        score: completed ? scoreCleared(attempts, maxAttempts, 10) : 0,
+        attempts,
+        max_attempts: maxAttempts,
+        completed,
+        metadata: { puzzle_number: puzzleNumber },
       }
     }
 
