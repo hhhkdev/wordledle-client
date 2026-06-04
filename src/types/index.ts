@@ -24,6 +24,7 @@ export interface GameResultMetadata {
   streak?: number | null
   time_seconds?: number | null
   max_similarity?: number | null
+  early_solver_rank?: number | null
 }
 
 export interface GameResult {

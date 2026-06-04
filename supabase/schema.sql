@@ -35,6 +35,7 @@ create table if not exists public.results (
   attempts integer,
   max_attempts integer,
   completed boolean default false,
+  puzzle_number integer,
   metadata jsonb default '{}',
   created_at timestamptz default now(),
   unique(user_id, game_id, date)
@@ -60,12 +61,11 @@ create table if not exists public.feedback (
 
 -- ── 기존 스키마 업그레이드 (idempotent) ────────────────────────
 alter table public.results add column if not exists metadata jsonb default '{}';
+alter table public.results add column if not exists puzzle_number integer;
 alter table public.games   add column if not exists image_url text;
 alter table public.users   add column if not exists is_admin boolean not null default false;
 
--- ── Games seed ──────────────────────────────────────────────────
-delete from public.games;
-
+-- ── Games seed (upsert — 기존 데이터 보존) ──────────────────────
 insert into public.games (name, slug, url, description, emoji, color, result_format, image_url)
 values
   (
@@ -91,7 +91,38 @@ values
     'https://semantle-ko.newsjel.ly',
     '단어 유사도로 정답 찾기', '🧠', '#8e44ad',
     'N번째 꼬맨틀을 풀었습니다!', null
-  );
+  ),
+  (
+    '카카오 오늘의 단어', 'kakao-word',
+    '',
+    '카카오톡 미니게임 — 결과 입력 전용', '💬', '#C49A00',
+    '오늘의 단어 맞히기 성공!', null
+  ),
+  (
+    'Word Hurdle 4-letter', 'wordhurdle-4',
+    'https://solitaired.com/wordhurdle-4-letter',
+    '4글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 4-letter 3201 4/6 #wordhurdle', null
+  ),
+  (
+    'Word Hurdle 5-letter', 'wordhurdle-5',
+    'https://solitaired.com/wordhurdle-5-letter',
+    '5글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 5-letter 3201 3/6 #wordhurdle', null
+  ),
+  (
+    'Word Hurdle', 'wordhurdle-6',
+    'https://solitaired.com/wordhurdle',
+    '6글자 영단어 맞추기', '💙', '#1A73E8',
+    'Word Hurdle 3201 5/6 #wordhurdle', null
+  )
+on conflict (slug) do update set
+  name         = excluded.name,
+  url          = excluded.url,
+  description  = excluded.description,
+  emoji        = excluded.emoji,
+  color        = excluded.color,
+  result_format = excluded.result_format;
 
 -- ── Row Level Security ──────────────────────────────────────────
 alter table public.users    disable row level security;

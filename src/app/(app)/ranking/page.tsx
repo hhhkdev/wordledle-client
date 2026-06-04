@@ -89,7 +89,7 @@ function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null, s
 
 function makeDefaultFilter(): FilterState {
   const today = kstToday()
-  return { period: 'today', selectedMonth: kstTodayMonth(), rangeStart: today, rangeEnd: today, selectedGame: 'all' }
+  return { period: 'all', selectedMonth: kstTodayMonth(), rangeStart: today, rangeEnd: today, selectedGame: 'all' }
 }
 
 export default function RankingPage() {
@@ -149,7 +149,7 @@ export default function RankingPage() {
   const selectedGameObj = games.find(g => g.id === appliedFilter.selectedGame)
   const selectedGameSlug = selectedGameObj?.slug ?? null
   const isKkomanttle = selectedGameSlug === 'kkomanttle'
-  const activeFilterCount = (appliedFilter.period !== 'today' ? 1 : 0) + (appliedFilter.selectedGame !== 'all' ? 1 : 0)
+  const activeFilterCount = (appliedFilter.period !== 'all' ? 1 : 0) + (appliedFilter.selectedGame !== 'all' ? 1 : 0)
 
   function filterByGame(entries: RankingEntry[]) {
     if (appliedFilter.selectedGame === 'all') return sortEntries(entries, null, sortKey)
