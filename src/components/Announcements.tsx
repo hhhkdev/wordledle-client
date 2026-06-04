@@ -24,6 +24,22 @@ const TAG_STYLES: Record<AnnouncementTag, string> = {
 const ANNOUNCEMENTS: Announcement[] = [
   {
     date: '2026-06-05',
+    tag: '업데이트',
+    title: 'v0.0.3 업데이트',
+    content:
+      '게임 추가\n' +
+      '• Word Hurdle 4-letter / 5-letter / 6-letter 추가\n\n' +
+      '카카오 오늘의 단어\n' +
+      '• "N번째 정답자" 결과 포맷 지원\n' +
+      '• 빠른 풀이 보너스 +5점 추가\n\n' +
+      '랭킹\n' +
+      '• 홈 화면 랭킹 위젯에 오늘/어제 탭 추가\n' +
+      '• 랭킹 페이지 기본값이 누적 랭킹으로 변경\n\n' +
+      '기타\n' +
+      '• 게임 카드 이미지 적용',
+  },
+  {
+    date: '2026-06-05',
     tag: '공지',
     title: '기록 데이터 초기화 안내',
     content:
