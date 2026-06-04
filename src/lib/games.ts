@@ -2,7 +2,7 @@ import { Game, ParsedResult } from '@/types'
 
 export function getGameImageUrl(slug: string, override?: string | null): string {
   if (override) return override
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/game-images/${slug}.webp`
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/game-images/${slug}.jpg`
 }
 
 export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [

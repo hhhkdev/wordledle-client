@@ -20,6 +20,7 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
   const { user } = useAuth()
   const [showChoice, setShowChoice] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
 
   const hasResult = !!result
   const completed = result?.completed
@@ -47,11 +48,16 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         style={undefined}
         onClick={() => setShowChoice(true)}
       >
-        {/* 이미지 */}
-        <div className="aspect-video overflow-hidden">
-          <img src={imageUrl} alt={game.name}
-            className="w-full h-full object-cover" draggable={false} />
-        </div>
+        {/* 이미지 or 색상 플레이스홀더 */}
+        {imgFailed ? (
+          <div className="aspect-video" style={{ backgroundColor: game.color + '33' }} />
+        ) : (
+          <div className="aspect-video overflow-hidden">
+            <img src={imageUrl} alt={game.name}
+              className="w-full h-full object-cover" draggable={false}
+              onError={() => setImgFailed(true)} />
+          </div>
+        )}
 
         {/* 완료 뱃지 */}
         {hasResult && !showChoice && (
