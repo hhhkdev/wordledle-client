@@ -23,6 +23,15 @@ const TAG_STYLES: Record<AnnouncementTag, string> = {
 // ── 공지사항 목록 (최신 순으로 추가) ────────────────────────────
 const ANNOUNCEMENTS: Announcement[] = [
   {
+    date: '2026-06-05',
+    tag: '공지',
+    title: '기록 데이터 초기화 안내',
+    content:
+      '서버 작업 중 오류로 인해 기존에 입력하신 게임 결과 데이터가 초기화되었습니다.\n\n' +
+      '현재 복구 가능 여부를 확인 중이며, 결과에 따라 다시 안내드리겠습니다.\n\n' +
+      '불편을 드려 죄송합니다.',
+  },
+  {
     date: '2026-06-02',
     tag: '업데이트',
     title: 'v0.0.2 업데이트',
