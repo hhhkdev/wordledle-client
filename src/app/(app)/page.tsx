@@ -35,7 +35,9 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
   const [games, setGames] = useState<Game[]>([])
   const [currentResults, setCurrentResults] = useState<Record<string, GameResult>>({})
-  const [topRanking, setTopRanking] = useState<RankingEntry[]>([])
+  const [todayRanking, setTodayRanking] = useState<RankingEntry[]>([])
+  const [yesterdayRanking, setYesterdayRanking] = useState<RankingEntry[]>([])
+  const [rankingTab, setRankingTab] = useState<'today' | 'yesterday'>('today')
   const [loadingGames, setLoadingGames] = useState(true)
 
   useEffect(() => {
@@ -77,7 +79,7 @@ export default function HomePage() {
       })
   }, [user, games])
 
-  // 최근 24시간 랭킹 (어제·오늘 결과, 게임당 가장 최신 1건)
+  // 오늘·어제 랭킹
   useEffect(() => {
     const yesterday = kstYesterday()
     const today = kstToday()
@@ -89,33 +91,28 @@ export default function HomePage() {
       .then(({ data }) => {
         if (!data) return
 
-        // (user_id, game_id) 당 가장 최신 날짜 결과
-        const best = new Map<string, typeof data[0]>()
-        for (const r of data) {
-          const k = `${r.user_id}|${r.game_id}`
-          const cur = best.get(k)
-          if (!cur || r.date > cur.date) best.set(k, r)
+        function buildRanking(dateStr: string) {
+          const rows = data!.filter(r => r.date === dateStr)
+          const userMap = new Map<string, RankingEntry>()
+          for (const r of rows) {
+            const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
+            if (!u) continue
+            if (!userMap.has(u.id)) userMap.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
+            const e = userMap.get(u.id)!
+            e.totalScore += r.score ?? 0
+            if (r.completed) e.completedCount++
+          }
+          return Array.from(userMap.values())
+            .sort((a, b) =>
+              b.completedCount !== a.completedCount
+                ? b.completedCount - a.completedCount
+                : b.totalScore - a.totalScore
+            )
+            .slice(0, 5)
         }
 
-        // 유저별 합산
-        const userMap = new Map<string, RankingEntry>()
-        for (const r of best.values()) {
-          const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
-          if (!u) continue
-          if (!userMap.has(u.id)) userMap.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
-          const e = userMap.get(u.id)!
-          e.totalScore += r.score ?? 0
-          if (r.completed) e.completedCount++
-        }
-
-        const sorted = Array.from(userMap.values())
-          .sort((a, b) =>
-            b.completedCount !== a.completedCount
-              ? b.completedCount - a.completedCount
-              : b.totalScore - a.totalScore
-          )
-          .slice(0, 5)
-        setTopRanking(sorted)
+        setTodayRanking(buildRanking(today))
+        setYesterdayRanking(buildRanking(yesterday))
       })
   }, [])
 
@@ -173,27 +170,43 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 최근 24시간 랭킹 */}
+      {/* 오늘·어제 랭킹 */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
             <Trophy size={18} className="text-yellow-500" />
-            최근 24시간 랭킹
+            이번 회차 랭킹
           </h2>
           <Link href="/ranking" className="flex items-center gap-0.5 text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors">
             전체보기 <ChevronRight size={14} />
           </Link>
         </div>
 
-        {topRanking.length === 0 ? (
+        {/* 탭 */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-3 w-fit">
+          {(['today', 'yesterday'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setRankingTab(t)}
+              className={cn(
+                'px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                rankingTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+              )}
+            >
+              {t === 'today' ? '오늘' : '어제'}
+            </button>
+          ))}
+        </div>
+
+        {(rankingTab === 'today' ? todayRanking : yesterdayRanking).length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 py-10 text-center text-gray-300 text-sm">
             아직 결과가 없어요
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             {/* 1위 강조 */}
-            {topRanking[0] && (() => {
-              const e = topRanking[0]
+            {(rankingTab === 'today' ? todayRanking : yesterdayRanking)[0] && (() => {
+              const e = (rankingTab === 'today' ? todayRanking : yesterdayRanking)[0]
               const isMe = e.user.id === user?.id
               return (
                 <div className={cn(
@@ -221,7 +234,7 @@ export default function HomePage() {
             })()}
 
             {/* 2~5위 */}
-            {topRanking.slice(1).map((entry, idx) => {
+            {(rankingTab === 'today' ? todayRanking : yesterdayRanking).slice(1).map((entry, idx) => {
               const rank = idx + 2
               const isMe = entry.user.id === user?.id
               return (
