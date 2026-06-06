@@ -196,25 +196,25 @@ export default function UserProfilePage() {
             </p>
 
             {isMe && editingNick ? (
-              <form onSubmit={handleNicknameChange} className="flex items-start gap-2 mt-1">
-                <div>
-                  <Input
+              <form onSubmit={handleNicknameChange} className="flex flex-col gap-1.5 mt-1">
+                <div className="flex items-center gap-2">
+                  <input
                     value={newNickname}
                     onChange={e => { setNewNickname(e.target.value); setNickError('') }}
                     placeholder={me!.nickname}
-                    error={nickError}
                     autoFocus
-                    className="text-xl font-black h-10"
+                    className="text-lg font-black h-9 px-3 rounded-xl border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-40"
                   />
+                  <button type="submit" disabled={nickLoading}
+                    className="h-9 w-9 flex items-center justify-center rounded-xl bg-gray-900 text-white hover:bg-gray-700 active:opacity-70 transition-colors disabled:opacity-50 shrink-0">
+                    <Check size={15} />
+                  </button>
+                  <button type="button" onClick={() => { setEditingNick(false); setNickError('') }}
+                    className="h-9 w-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 active:opacity-70 transition-colors shrink-0">
+                    <X size={15} />
+                  </button>
                 </div>
-                <div className="flex gap-1 mt-0.5">
-                  <Button type="submit" size="sm" loading={nickLoading} className="bg-gray-900! hover:bg-gray-700!">
-                    <Check size={14} />
-                  </Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => { setEditingNick(false); setNickError('') }}>
-                    <X size={14} />
-                  </Button>
-                </div>
+                {nickError && <p className="text-xs text-red-500">{nickError}</p>}
               </form>
             ) : (
               <div className="flex items-center gap-2">
