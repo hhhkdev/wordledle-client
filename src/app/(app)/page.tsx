@@ -32,8 +32,6 @@ export default function HomePage() {
   const [games, setGames] = useState<Game[]>([])
   const [currentResults, setCurrentResults] = useState<Record<string, GameResult>>({})
   const [todayRanking, setTodayRanking] = useState<RankingEntry[]>([])
-  const [yesterdayRanking, setYesterdayRanking] = useState<RankingEntry[]>([])
-  const [rankingTab, setRankingTab] = useState<'today' | 'yesterday'>('today')
   const [loadingGames, setLoadingGames] = useState(true)
 
   useEffect(() => {
@@ -105,7 +103,6 @@ export default function HomePage() {
         }
 
         setTodayRanking(buildRanking(today))
-        setYesterdayRanking(buildRanking(yesterday))
       })
   }, [])
 
@@ -166,28 +163,17 @@ export default function HomePage() {
       {/* 이번 회차 랭킹 */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
-              <Trophy size={18} className="text-yellow-500" />
-              이번 회차 랭킹
-            </h2>
-            <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
-              {(['today', 'yesterday'] as const).map(t => (
-                <button key={t} onClick={() => setRankingTab(t)}
-                  className={cn('px-3 py-1 rounded-md text-xs font-semibold transition-colors',
-                    rankingTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400')}>
-                  {t === 'today' ? '오늘' : '어제'}
-                </button>
-              ))}
-            </div>
-          </div>
+          <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <Trophy size={18} className="text-yellow-500" />
+            {todayStr} 랭킹
+          </h2>
           <Link href="/ranking" className="flex items-center gap-0.5 text-sm font-semibold text-gray-400 hover:text-gray-700 transition-colors">
             전체보기 <ChevronRight size={14} />
           </Link>
         </div>
 
         {(() => {
-          const base = rankingTab === 'today' ? todayRanking : yesterdayRanking
+          const base = todayRanking
           if (base.length === 0) return (
             <div className="bg-white rounded-2xl border border-gray-100 py-10 text-center text-gray-300 text-sm">
               아직 결과가 없어요
