@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Game, GameResult, User } from '@/types'
 import { CheckCircle2, XCircle, Minus, ChevronDown, UserPlus, UserMinus, Pencil, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { validateNickname } from '@/lib/validateNickname'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
@@ -152,9 +153,8 @@ export default function UserProfilePage() {
     e.preventDefault()
     if (!me || !newNickname.trim()) return
     if (newNickname.trim() === me.nickname) { setEditingNick(false); return }
-    if (newNickname.trim().length < 2 || newNickname.trim().length > 16) {
-      setNickError('닉네임은 2~16자여야 합니다.'); return
-    }
+    const nickErr = validateNickname(newNickname)
+    if (nickErr) { setNickError(nickErr); return }
     setNickLoading(true); setNickError('')
     const supabase = createClient()
     const { data: existing } = await supabase.from('users').select('id').eq('nickname', newNickname.trim()).single()
@@ -189,13 +189,10 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* 프로필 헤더 */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
-              {isMe ? '내 프로필' : '유저 프로필'}
-            </p>
-
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* 닉네임 영역 */}
+          <div className="flex-1 min-w-0">
             {isMe && editingNick ? (
               <form onSubmit={handleNicknameChange} className="flex flex-col gap-1">
                 <div className="flex items-center gap-1.5">
@@ -218,14 +215,14 @@ export default function UserProfilePage() {
                 {nickError && <p className="text-xs text-red-500">{nickError}</p>}
               </form>
             ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-gray-900 truncate">{profileUser?.nickname}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-black text-gray-900">{profileUser?.nickname}</h1>
                 {isMe && (
                   <>
-                    <span className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">나</span>
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">나</span>
                     <button
                       onClick={() => { setNewNickname(me!.nickname); setEditingNick(true) }}
-                      className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <Pencil size={14} />
                     </button>
@@ -233,21 +230,20 @@ export default function UserProfilePage() {
                 )}
               </div>
             )}
-
             <p className="text-xs text-gray-400 mt-1">
               {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
             </p>
           </div>
 
           {/* 오늘 완료 · 총점 */}
-          <div className="flex gap-2 shrink-0">
-            <div className="text-center bg-gray-50 rounded-2xl px-4 py-2.5">
+          <div className="flex gap-2">
+            <div className="flex-1 sm:flex-none text-center bg-gray-50 rounded-2xl px-4 py-2.5">
               <p className="text-2xl font-black text-gray-900">
                 {todayCompleted}<span className="text-base text-gray-300 font-bold">/{games.length}</span>
               </p>
               <p className="text-xs font-semibold text-gray-400 mt-0.5">오늘 완료</p>
             </div>
-            <div className="text-center bg-gray-50 rounded-2xl px-4 py-2.5">
+            <div className="flex-1 sm:flex-none text-center bg-gray-50 rounded-2xl px-4 py-2.5">
               <p className="text-2xl font-black text-gray-900">{totalScore}</p>
               <p className="text-xs font-semibold text-gray-400 mt-0.5">총 점수</p>
             </div>
@@ -283,7 +279,7 @@ export default function UserProfilePage() {
       {/* 게임별 통계 */}
       <section className="mb-5">
         <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 items-start">
           {gameStats.map(stat => <GameStatCard key={stat.game.id} stat={stat} />)}
         </div>
       </section>
@@ -320,42 +316,69 @@ function StatItem({ label, value }: { label: string; value: string }) {
 function GameStatCard({ stat }: { stat: GameStat }) {
   const [expanded, setExpanded] = useState(false)
   const completionRate = stat.totalPlayed ? Math.round(stat.totalCompleted / stat.totalPlayed * 100) : 0
+  const detailLabel = stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'
+  const detailValue = stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'
+  const streakValue = stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'
 
   return (
-    <div className="rounded-2xl border border-gray-100 overflow-hidden">
-      {/* 상단: 흰 배경 — 점수·완료 */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full text-left bg-white px-3.5 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-      >
-        <p className="text-2xl font-black tabular-nums leading-none text-gray-900">
-          {stat.totalScore}
-          <span className="text-sm font-semibold text-gray-400 ml-0.5">점</span>
-        </p>
-        <p className="text-xs text-gray-400 mt-1.5">
-          {stat.totalCompleted}회 완료
-          {stat.totalPlayed > 0 && <span className="ml-1">· {completionRate}%</span>}
-        </p>
-      </button>
+    <>
+      {/* ── 모바일: 가로 리스트 카드 ── */}
+      <div className="sm:hidden rounded-2xl border border-gray-100 overflow-hidden bg-white">
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        >
+          <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: stat.game.color }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-gray-900 truncate">{stat.game.name}</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {stat.totalCompleted}회 완료{stat.totalPlayed > 0 && ` · ${completionRate}%`}
+            </p>
+          </div>
+          <p className="text-xl font-black tabular-nums text-gray-900 shrink-0">
+            {stat.totalScore}<span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
+          </p>
+          <ChevronDown size={14} className={cn('text-gray-300 shrink-0 transition-transform', expanded && 'rotate-180')} />
+        </button>
+        {expanded && (
+          <div className="grid grid-cols-2 gap-y-2.5 px-4 py-3 bg-gray-50 border-t border-gray-100">
+            <StatItem label={detailLabel} value={detailValue} />
+            <StatItem label="연속" value={streakValue} />
+          </div>
+        )}
+      </div>
 
-      {/* 상세 펼침 */}
-      {expanded && (
-        <div className="grid grid-cols-2 gap-y-2.5 px-3.5 py-3 bg-gray-50 border-t border-gray-100">
-          <StatItem label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'} value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'} />
-          <StatItem label="연속" value={stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'} />
-        </div>
-      )}
-
-      {/* 하단: 게임 컬러 배경 — 게임명 */}
-      <button
-        onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5"
-        style={{ backgroundColor: stat.game.color }}
-      >
-        <p className="text-sm font-black text-white leading-tight truncate">{stat.game.name}</p>
-        <ChevronDown size={13} className={cn('text-white/60 shrink-0 ml-1 transition-transform', expanded && 'rotate-180')} />
-      </button>
-    </div>
+      {/* ── 데스크탑: 세로 카드 (기존) ── */}
+      <div className="hidden sm:block rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="w-full text-left bg-white px-3.5 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        >
+          <p className="text-2xl font-black tabular-nums leading-none text-gray-900">
+            {stat.totalScore}
+            <span className="text-sm font-semibold text-gray-400 ml-0.5">점</span>
+          </p>
+          <p className="text-xs text-gray-400 mt-1.5">
+            {stat.totalCompleted}회 완료
+            {stat.totalPlayed > 0 && <span className="ml-1">· {completionRate}%</span>}
+          </p>
+        </button>
+        {expanded && (
+          <div className="grid grid-cols-2 gap-y-2.5 px-3.5 py-3 bg-gray-50 border-t border-gray-100">
+            <StatItem label={detailLabel} value={detailValue} />
+            <StatItem label="연속" value={streakValue} />
+          </div>
+        )}
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="w-full flex items-center justify-between px-3.5 py-2.5"
+          style={{ backgroundColor: stat.game.color }}
+        >
+          <p className="text-sm font-black text-white leading-tight truncate">{stat.game.name}</p>
+          <ChevronDown size={13} className={cn('text-white/60 shrink-0 ml-1 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      </div>
+    </>
   )
 }
 

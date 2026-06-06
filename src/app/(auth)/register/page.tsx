@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { register } from '@/lib/auth'
+import { validateNickname } from '@/lib/validateNickname'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Logo from '@/components/Logo'
@@ -20,8 +21,8 @@ export default function RegisterPage() {
 
   function validate() {
     const e: typeof errors = {}
-    if (nickname.trim().length < 2) e.nickname = '닉네임은 2자 이상이어야 합니다.'
-    if (nickname.trim().length > 16) e.nickname = '닉네임은 16자 이하여야 합니다.'
+    const nickErr = validateNickname(nickname)
+    if (nickErr) e.nickname = nickErr
     if (password.length < 4) e.password = '비밀번호는 4자 이상이어야 합니다.'
     if (password !== confirm) e.confirm = '비밀번호가 일치하지 않습니다.'
     return e

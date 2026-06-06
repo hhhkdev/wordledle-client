@@ -131,7 +131,7 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <textarea
-          className="w-full h-36 px-4 py-3 rounded-xl border border-gray-200 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400"
+          className="w-full h-36 px-4 py-3 rounded-xl border border-gray-200 text-base sm:text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-400"
           placeholder="결과 텍스트를 붙여넣으세요..."
           value={text}
           onChange={e => { setText(e.target.value); setError('') }}
