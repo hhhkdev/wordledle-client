@@ -5,6 +5,7 @@ import { Megaphone, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type AnnouncementTag = '업데이트' | '공지' | '이벤트' | '점검'
+type TabKey = 'patch' | 'notice'
 
 interface Announcement {
   date: string
@@ -73,7 +74,7 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     date: '2026-06-01',
     tag: '업데이트',
-    title: '점수 체계 개편 및 카카오 오늘의 단어 추가',
+    title: 'v0.0.1 점수 체계 개편 및 카카오 오늘의 단어 추가',
     content:
       '게임별 난이도에 따라 점수 체계가 개편되었습니다.\n\n' +
       '• Wordle / 꼬들: 클리어 10점 + 절약한 시도 수당 1점 (최대 15점)\n' +
@@ -107,72 +108,110 @@ const ANNOUNCEMENTS: Announcement[] = [
 const PAGE_SIZE = 3
 // ────────────────────────────────────────────────────────────────
 
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'patch',  label: '패치노트' },
+  { key: 'notice', label: '공지' },
+]
+
+function filterByTab(items: Announcement[], tab: TabKey) {
+  return items.filter(a => tab === 'patch' ? a.tag === '업데이트' : a.tag !== '업데이트')
+}
+
 export default function Announcements() {
+  const [tab, setTab] = useState<TabKey>('patch')
   const [page, setPage] = useState(0)
   const [openSet, setOpenSet] = useState<Set<number>>(new Set())
 
+  const filtered = filterByTab(ANNOUNCEMENTS, tab)
   if (ANNOUNCEMENTS.length === 0) return null
 
-  const totalPages = Math.ceil(ANNOUNCEMENTS.length / PAGE_SIZE)
-  const pageItems = ANNOUNCEMENTS.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
-  function toggle(globalIdx: number) {
+  function toggle(idx: number) {
     setOpenSet(prev => {
       const next = new Set(prev)
-      next.has(globalIdx) ? next.delete(globalIdx) : next.add(globalIdx)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
       return next
     })
   }
 
+  function switchTab(t: TabKey) {
+    setTab(t)
+    setPage(0)
+    setOpenSet(new Set())
+  }
+
   function goToPage(p: number) {
     setPage(p)
-    setOpenSet(new Set()) // 페이지 이동 시 모두 닫기
+    setOpenSet(new Set())
   }
 
   return (
     <section className="mt-10">
-      <h2 className="text-base font-black text-gray-900 flex items-center gap-2 mb-3">
-        <Megaphone size={16} className="text-gray-500" />
-        공지사항
-      </h2>
-
-      <div className="flex flex-col gap-2">
-        {pageItems.map((a, i) => {
-          const globalIdx = page * PAGE_SIZE + i
-          const open = openSet.has(globalIdx)
-
-          return (
-            <div key={globalIdx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => toggle(globalIdx)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full shrink-0', TAG_STYLES[a.tag])}>
-                      {a.tag}
-                    </span>
-                    <time className="text-xs text-gray-400">{a.date}</time>
-                  </div>
-                  <p className="text-sm font-bold text-gray-900 leading-snug">{a.title}</p>
-                </div>
-                <ChevronDown
-                  size={16}
-                  className={cn('text-gray-300 shrink-0 transition-transform duration-200', open && 'rotate-180')}
-                />
-              </button>
-
-              {open && (
-                <div className="px-4 pb-4 pt-3 border-t border-gray-50">
-                  <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">{a.content}</p>
-                </div>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-black text-gray-900 flex items-center gap-2">
+          <Megaphone size={16} className="text-gray-500" />
+          공지사항
+        </h2>
+        <div className="flex items-center bg-gray-100 rounded-xl p-0.5 gap-0.5">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => switchTab(t.key)}
+              className={cn(
+                'px-3 py-1.5 rounded-[10px] text-xs font-bold transition-all',
+                tab === t.key
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-600',
               )}
-            </div>
-          )
-        })}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 페이지네이션 */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 py-10 text-center text-gray-300 text-sm">
+          항목이 없어요
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {pageItems.map((a, i) => {
+            const idx = page * PAGE_SIZE + i
+            const open = openSet.has(idx)
+            return (
+              <div key={idx} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => toggle(idx)}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full shrink-0', TAG_STYLES[a.tag])}>
+                        {a.tag}
+                      </span>
+                      <time className="text-xs text-gray-400">{a.date}</time>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900 leading-snug">{a.title}</p>
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={cn('text-gray-300 shrink-0 transition-transform duration-200', open && 'rotate-180')}
+                  />
+                </button>
+                {open && (
+                  <div className="px-4 pb-4 pt-3 border-t border-gray-50">
+                    <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">{a.content}</p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 mt-3">
           <button

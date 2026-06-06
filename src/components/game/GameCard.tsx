@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { CheckCircle2, Edit3, XCircle, ExternalLink, Plus, X, ChevronRight, LogIn } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -53,7 +54,8 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
       <div
         className={cn(
           'relative flex flex-col rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 border border-gray-100',
-          dimmed && !showChoice && 'opacity-75',
+          completed && !showChoice && 'grayscale',
+          dimmed && !showChoice && 'opacity-80',
           !showChoice && 'hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]'
         )}
         style={undefined}
@@ -61,23 +63,44 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
       >
         {/* 이미지 or 색상 플레이스홀더 */}
         {imgFailed ? (
-          <div className="aspect-video" style={{ backgroundColor: game.color + '33' }} />
+          <div className="relative aspect-video" style={{ backgroundColor: game.color + '33' }}>
+            {completed && !showChoice && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-sm">
+                  <CheckCircle2 size={15} className="text-green-500" />
+                  <span className="text-sm font-black text-gray-800">완료</span>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
-          <div className="aspect-video overflow-hidden">
-            <img src={imageUrl} alt={game.name}
-              className="w-full h-full object-cover" draggable={false}
-              onError={() => setImgFailed(true)} />
+          <div className="relative aspect-video overflow-hidden">
+            <Image
+              src={imageUrl}
+              alt={game.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover"
+              draggable={false}
+              unoptimized={!imageUrl.includes('.supabase.co')}
+              onError={() => setImgFailed(true)}
+            />
+            {completed && !showChoice && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                <div className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-sm">
+                  <CheckCircle2 size={15} className="text-green-500" />
+                  <span className="text-sm font-black text-gray-800">완료</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* 완료 뱃지 */}
-        {hasResult && !showChoice && (
+        {/* 실패 뱃지 */}
+        {hasResult && !completed && !showChoice && (
           <div className="absolute top-2 right-2 z-10">
-            <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center shadow-sm',
-              completed ? 'bg-green-500' : 'bg-red-400')}>
-              {completed
-                ? <CheckCircle2 size={13} className="text-white" />
-                : <XCircle size={13} className="text-white" />}
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center shadow-sm bg-red-400">
+              <XCircle size={13} className="text-white" />
             </div>
           </div>
         )}
