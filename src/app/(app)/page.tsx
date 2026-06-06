@@ -15,6 +15,7 @@ interface RankingEntry {
   user: User
   completedCount: number
   totalScore: number
+  gameResults: { game_id: string; completed: boolean }[]
 }
 
 
@@ -92,17 +93,14 @@ export default function HomePage() {
           for (const r of rows) {
             const u = (Array.isArray(r.user) ? r.user[0] : r.user) as User
             if (!u) continue
-            if (!userMap.has(u.id)) userMap.set(u.id, { user: u, completedCount: 0, totalScore: 0 })
+            if (!userMap.has(u.id)) userMap.set(u.id, { user: u, completedCount: 0, totalScore: 0, gameResults: [] })
             const e = userMap.get(u.id)!
             e.totalScore += r.score ?? 0
             if (r.completed) e.completedCount++
+            e.gameResults.push({ game_id: r.game_id, completed: r.completed })
           }
           return Array.from(userMap.values())
-            .sort((a, b) =>
-              b.completedCount !== a.completedCount
-                ? b.completedCount - a.completedCount
-                : b.totalScore - a.totalScore
-            )
+            .sort((a, b) => b.totalScore - a.totalScore || b.completedCount - a.completedCount)
             .slice(0, 5)
         }
 
@@ -218,13 +216,39 @@ export default function HomePage() {
                     isMe && 'bg-blue-50 hover:bg-blue-50/80'
                   )}
                 >
+                  {/* 순위 뱃지 */}
                   <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-sm font-black', badgeStyle)}>
                     {rank}
                   </div>
-                  <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
+
+                  {/* 닉네임 */}
+                  <span className={cn('w-24 shrink-0 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
                     {entry.user.nickname}
-                    {isMe && <span className="ml-1.5 text-xs text-blue-400 font-normal">나</span>}
+                    {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
                   </span>
+
+                  {/* 게임 완료 도트 */}
+                  <div className="flex-1 flex items-center gap-1 flex-wrap">
+                    {games.map(game => {
+                      const gr = entry.gameResults.find(r => r.game_id === game.id)
+                      return (
+                        <div
+                          key={game.id}
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{
+                            backgroundColor: gr?.completed
+                              ? game.color
+                              : gr
+                              ? '#fca5a5'
+                              : '#e5e7eb',
+                          }}
+                          title={game.name}
+                        />
+                      )
+                    })}
+                  </div>
+
+                  {/* 점수 */}
                   <div className="text-right shrink-0">
                     <span className={cn('text-base font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
                       {entry.totalScore}
