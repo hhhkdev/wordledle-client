@@ -57,7 +57,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://solitaired.com/wordhurdle-4-letter',
     description: '4글자 영단어 맞추기',
     emoji: '💙',
-    color: '#1A73E8',
+    color: '#FFFFFF',
     result_format: 'Word Hurdle 4-letter 3201 4/6 #wordhurdle\n🤍🤍🤍💛\n💙🤍🤍🤍\n💙💙💙💙',
   },
   {
@@ -66,7 +66,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://solitaired.com/wordhurdle-5-letter',
     description: '5글자 영단어 맞추기',
     emoji: '💙',
-    color: '#1A73E8',
+    color: '#FFFFFF',
     result_format: 'Word Hurdle 5-letter 3201 3/6 #wordhurdle\n💙🤍🤍🤍🤍\n🤍💙💙💙💙\n💙💙💙💙💙',
   },
   {
@@ -75,7 +75,7 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
     url: 'https://solitaired.com/wordhurdle',
     description: '6글자 영단어 맞추기',
     emoji: '💙',
-    color: '#1A73E8',
+    color: '#FFFFFF',
     result_format: 'Word Hurdle 3201 5/6 #wordhurdle\n💛💛💛🤍🤍🤍\n💙💙💙💙💙💙',
   },
 ]

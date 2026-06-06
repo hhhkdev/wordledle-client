@@ -15,6 +15,13 @@ interface GameCardProps {
   onResultChange: (result: GameResult) => void
 }
 
+function isLightColor(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 160
+}
+
 
 export default function GameCard({ game, result, onResultChange }: GameCardProps) {
   const { user } = useAuth()
@@ -26,6 +33,10 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
   const completed = result?.completed
   const imageUrl = getGameImageUrl(game.slug, game.image_url)
   const dimmed = !!user && hasResult
+  const lightBg = isLightColor(game.color)
+  const textPrimary = lightBg ? 'text-gray-900' : 'text-white'
+  const textSecondary = lightBg ? 'text-gray-500' : 'text-white/70'
+  const chipBg = lightBg ? 'bg-black/10 text-gray-800' : 'bg-white/20 text-white'
 
   useEffect(() => {
     if (!showChoice) return
@@ -74,76 +85,71 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
         {/* 텍스트 섹션 */}
         <div className="flex-1 flex flex-col px-3 py-2.5" style={{ backgroundColor: game.color }}>
           <div className="flex items-start justify-between gap-1">
-            <p className="text-sm font-black text-white leading-tight truncate">{game.name}</p>
-            <ChevronRight size={14} className="text-white/50 shrink-0 mt-0.5" />
+            <p className={cn('text-sm font-black leading-tight truncate', textPrimary)}>{game.name}</p>
+            <ChevronRight size={14} className={cn('shrink-0 mt-0.5', textSecondary)} />
           </div>
           {hasResult && result ? (
             <div className="flex items-center gap-1 flex-wrap mt-1.5">
               {result.attempts != null && (
-                <span className="bg-white/20 text-white rounded-md px-1.5 py-0.5 text-xs font-bold">
+                <span className={cn('rounded-md px-1.5 py-0.5 text-xs font-bold', chipBg)}>
                   {result.attempts}{result.max_attempts ? `/${result.max_attempts}` : ''}번
                 </span>
               )}
               {result.completed && result.score != null && result.score > 0 ? (
-                <span className="bg-white/20 text-white rounded-md px-1.5 py-0.5 text-xs font-bold">
+                <span className={cn('rounded-md px-1.5 py-0.5 text-xs font-bold', chipBg)}>
                   +{result.score}점
                 </span>
               ) : !result.completed ? (
-                <span className="bg-white/20 text-white rounded-md px-1.5 py-0.5 text-xs font-bold">실패</span>
+                <span className={cn('rounded-md px-1.5 py-0.5 text-xs font-bold', chipBg)}>실패</span>
               ) : null}
             </div>
           ) : (
-            <p className="text-xs text-white/70 mt-0.5 line-clamp-2 leading-tight">{game.description}</p>
+            <p className={cn('text-xs mt-0.5 line-clamp-2 leading-tight', textSecondary)}>{game.description}</p>
           )}
         </div>
 
         {/* 선택지 오버레이 */}
         {showChoice && (
           <div
-            className="absolute inset-0 z-20 flex flex-row"
-            onClick={e => e.stopPropagation()}
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2.5 bg-black/65"
+            onClick={() => setShowChoice(false)}
           >
             <button
-              onClick={() => setShowChoice(false)}
-              className="absolute top-2 right-2 z-30 w-7 h-7 flex items-center justify-center rounded-full bg-black/30 text-white/80 active:bg-black/60 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setShowChoice(false) }}
+              className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-white/20 text-white active:bg-white/40 transition-colors"
             >
               <X size={13} />
             </button>
 
-            {game.url ? (
-              <>
-                <Link
-                  href={game.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-black/80 active:bg-black/90 transition-colors"
-                  onClick={() => setShowChoice(false)}
-                >
-                  <ExternalLink size={14} className="text-white" />
-                  <span className="text-white font-black text-xs">게임하기</span>
-                </Link>
-                <div className="w-px bg-white/50 shrink-0" />
-              </>
-            ) : null}
+            {game.url && (
+              <Link
+                href={game.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => { e.stopPropagation(); setShowChoice(false) }}
+                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
+              >
+                <ExternalLink size={14} />
+                게임하기
+              </Link>
+            )}
 
             {user ? (
               <button
-                className="flex-1 flex items-center justify-center gap-1.5 bg-black/80 active:bg-black/90 transition-colors"
-                onClick={() => { setShowChoice(false); setModalOpen(true) }}
+                onClick={(e) => { e.stopPropagation(); setShowChoice(false); setModalOpen(true) }}
+                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
               >
-                {hasResult ? <Edit3 size={14} className="text-white" /> : <Plus size={14} className="text-white" />}
-                <span className="text-white font-black text-xs">
-                  {hasResult ? '결과 수정' : '결과 입력'}
-                </span>
+                {hasResult ? <Edit3 size={14} /> : <Plus size={14} />}
+                {hasResult ? '결과 수정' : '결과 입력'}
               </button>
             ) : (
               <Link
                 href="/login"
-                className="flex-1 flex items-center justify-center gap-1.5 bg-black/80 active:bg-black/90 transition-colors"
-                onClick={() => setShowChoice(false)}
+                onClick={(e) => { e.stopPropagation(); setShowChoice(false) }}
+                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
               >
-                <LogIn size={14} className="text-white" />
-                <span className="text-white font-black text-xs">로그인하여 기록</span>
+                <LogIn size={14} />
+                로그인하여 기록
               </Link>
             )}
           </div>

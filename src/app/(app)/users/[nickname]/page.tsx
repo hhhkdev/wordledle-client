@@ -1,17 +1,13 @@
 'use client'
 
-import { useEffect, useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
-import { Game, GameResult } from '@/types'
-import Link from 'next/link'
-import { CheckCircle2, XCircle, Minus, Pencil, Check, X, ChevronDown, UserCircle } from 'lucide-react'
+import { Game, GameResult, User } from '@/types'
+import { CheckCircle2, XCircle, Minus, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import Input from '@/components/ui/Input'
-import Button from '@/components/ui/Button'
 
-// ── 타입 ─────────────────────────────────────────────────────
 interface DailyRecord {
   date: string
   results: (GameResult & { game: Game })[]
@@ -29,15 +25,15 @@ interface GameStat {
   currentStreak: number
 }
 
-// ── 헬퍼 ─────────────────────────────────────────────────────
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('ko-KR', {
+    month: 'long', day: 'numeric', weekday: 'short',
+  })
 }
 
 function getKSTDate(offsetDays = 0): string {
-  const d = new Date(Date.now() - offsetDays * 86400000)
-  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+  return new Date(Date.now() - offsetDays * 86400000)
+    .toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
 function getRecentDates(n: number): string[] {
@@ -53,50 +49,49 @@ function calcStreak(dates: string[], completedDates: Set<string>): number {
   return streak
 }
 
-// ── 컴포넌트 ──────────────────────────────────────────────────
-export default function MyPage() {
-  const router = useRouter()
-  const { user, loading: authLoading, login: setUser } = useAuth()
+export default function UserProfilePage() {
+  const { nickname } = useParams<{ nickname: string }>()
+  const { user: me } = useAuth()
+  const [profileUser, setProfileUser] = useState<User | null>(null)
   const [games, setGames] = useState<Game[]>([])
   const [allResults, setAllResults] = useState<(GameResult & { game: Game })[]>([])
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
-  // 닉네임 변경 상태
-  const [editingNick, setEditingNick] = useState(false)
-  const [newNickname, setNewNickname] = useState('')
-  const [nickError, setNickError] = useState('')
-  const [nickLoading, setNickLoading] = useState(false)
+  const decodedNickname = decodeURIComponent(nickname)
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login')
-  }, [user, authLoading, router])
-
-  useEffect(() => {
-    if (!user) return
     async function load() {
       const supabase = createClient()
-      const [{ data: gamesData }, { data: resultsData }] = await Promise.all([
+      const [{ data: userData }, { data: gamesData }] = await Promise.all([
+        supabase.from('users').select('id, nickname, created_at').eq('nickname', decodedNickname).single(),
         supabase.from('games').select('*').order('name'),
-        supabase
-          .from('results')
-          .select('*, game:games(*)')
-          .eq('user_id', user!.id)
-          .order('date', { ascending: false }),
       ])
+
+      if (!userData) { setNotFound(true); setLoading(false); return }
+      setProfileUser(userData as User)
       if (gamesData) setGames(gamesData as Game[])
+
+      const { data: resultsData } = await supabase
+        .from('results')
+        .select('*, game:games(*)')
+        .eq('user_id', userData.id)
+        .order('date', { ascending: false })
+
       if (resultsData) setAllResults(resultsData as (GameResult & { game: Game })[])
       setLoading(false)
     }
     load()
-  }, [user])
+  }, [decodedNickname])
 
-  // 날짜별 그루핑 (최근 30일)
   const recentDates = getRecentDates(30)
+
   const byDate = new Map<string, (GameResult & { game: Game })[]>()
   for (const r of allResults) {
     if (!byDate.has(r.date)) byDate.set(r.date, [])
     byDate.get(r.date)!.push(r)
   }
+
   const dailyRecords: DailyRecord[] = recentDates
     .filter(d => byDate.has(d))
     .map(d => {
@@ -109,65 +104,47 @@ export default function MyPage() {
       }
     })
 
-  // 게임별 통계
   const gameStats: GameStat[] = games.map(game => {
     const rs = allResults.filter(r => r.game_id === game.id)
     const completed = rs.filter(r => r.completed)
     const attempts = completed.filter(r => r.attempts !== null).map(r => r.attempts!)
-
-    // 연속 완료 일수
     const completedDates = new Set(completed.map(r => r.date))
-    const streak = calcStreak(recentDates, completedDates)
-
     return {
       game,
       totalPlayed: rs.length,
       totalCompleted: completed.length,
       totalScore: rs.reduce((sum, r) => sum + (r.score ?? 0), 0),
-      avgAttempts: attempts.length ? Math.round((attempts.reduce((a, b) => a + b, 0) / attempts.length) * 10) / 10 : null,
+      avgAttempts: attempts.length
+        ? Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length * 10) / 10
+        : null,
       bestAttempts: attempts.length ? Math.min(...attempts) : null,
-      currentStreak: streak,
+      currentStreak: calcStreak(recentDates, completedDates),
     }
   })
 
-  // 오늘 현황
   const today = getKSTDate()
   const todayResults = byDate.get(today) ?? []
   const todayCompleted = todayResults.filter(r => r.completed).length
+  const isMe = me?.id === profileUser?.id
 
-  // 닉네임 변경
-  async function handleNicknameChange(e: FormEvent) {
-    e.preventDefault()
-    if (!user || !newNickname.trim()) return
-    if (newNickname.trim() === user.nickname) { setEditingNick(false); return }
-    if (newNickname.trim().length < 2 || newNickname.trim().length > 16) {
-      setNickError('닉네임은 2~16자여야 합니다.')
-      return
-    }
+  if (loading) return (
+    <div className="max-w-2xl mx-auto">
+      <div className="h-32 rounded-2xl bg-gray-100 animate-pulse mb-5" />
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
+        ))}
+      </div>
+    </div>
+  )
 
-    setNickLoading(true)
-    setNickError('')
-    const supabase = createClient()
-
-    const { data: existing } = await supabase
-      .from('users').select('id').eq('nickname', newNickname.trim()).single()
-    if (existing) {
-      setNickError('이미 사용 중인 닉네임입니다.')
-      setNickLoading(false)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('users').update({ nickname: newNickname.trim() }).eq('id', user.id)
-      .select('id, nickname, created_at').single()
-
-    setNickLoading(false)
-    if (error || !data) { setNickError('변경에 실패했습니다.'); return }
-    setUser(data as typeof user)
-    setEditingNick(false)
-  }
-
-  if (authLoading || !user) return null
+  if (notFound) return (
+    <div className="max-w-2xl mx-auto text-center py-20">
+      <p className="text-4xl mb-3">🙈</p>
+      <p className="text-lg font-black text-gray-900">유저를 찾을 수 없어요</p>
+      <p className="text-sm text-gray-400 mt-1">@{decodedNickname}</p>
+    </div>
+  )
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -175,54 +152,22 @@ export default function MyPage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">내 프로필</p>
-            {editingNick ? (
-              <form onSubmit={handleNicknameChange} className="flex items-start gap-2 mt-1">
-                <div>
-                  <Input
-                    value={newNickname}
-                    onChange={e => { setNewNickname(e.target.value); setNickError('') }}
-                    placeholder={user.nickname}
-                    error={nickError}
-                    autoFocus
-                    className="text-xl font-black h-10"
-                  />
-                </div>
-                <div className="flex gap-1 mt-0.5">
-                  <Button type="submit" size="sm" loading={nickLoading} className="bg-gray-900! hover:bg-gray-700!">
-                    <Check size={14} />
-                  </Button>
-                  <Button type="button" size="sm" variant="secondary"
-                    onClick={() => { setEditingNick(false); setNickError('') }}>
-                    <X size={14} />
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-gray-900">{user.nickname}</h1>
-                <button
-                  onClick={() => { setNewNickname(user.nickname); setEditingNick(true) }}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                  title="닉네임 변경"
-                >
-                  <Pencil size={14} />
-                </button>
-              </div>
-            )}
-            <p className="text-xs text-gray-400 mt-1">
-              {new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
+              {isMe ? '내 프로필' : '유저 프로필'}
             </p>
-            <Link
-              href={`/users/${encodeURIComponent(user.nickname)}`}
-              className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors"
-            >
-              <UserCircle size={13} />
-              공개 프로필 보기
-            </Link>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black text-gray-900">{profileUser?.nickname}</h1>
+              {isMe && (
+                <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">나</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', {
+                year: 'numeric', month: 'long', day: 'numeric',
+              })} 가입
+            </p>
           </div>
 
-          {/* 오늘 완료 현황 */}
           <div className="text-center bg-gray-50 rounded-2xl px-6 py-4">
             <p className="text-3xl font-black text-gray-900">
               {todayCompleted}
@@ -236,31 +181,17 @@ export default function MyPage() {
       {/* 게임별 통계 */}
       <section className="mb-5">
         <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
-        {loading ? (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse bg-gray-50" />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
-            {gameStats.map(stat => (
-              <GameStatRow key={stat.game.id} stat={stat} />
-            ))}
-          </div>
-        )}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
+          {gameStats.map(stat => (
+            <GameStatRow key={stat.game.id} stat={stat} />
+          ))}
+        </div>
       </section>
 
       {/* 날짜별 기록 */}
       <section>
         <h2 className="text-lg font-black text-gray-900 mb-3">최근 기록</h2>
-        {loading ? (
-          <div className="flex flex-col gap-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-16 rounded-2xl bg-gray-200 animate-pulse" />
-            ))}
-          </div>
-        ) : dailyRecords.length === 0 ? (
+        {dailyRecords.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <p className="text-3xl mb-2">📅</p>
             <p className="text-sm font-semibold">아직 기록이 없어요</p>
@@ -268,7 +199,12 @@ export default function MyPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {dailyRecords.map(record => (
-              <DailyRecordRow key={record.date} record={record} games={games} isToday={record.date === today} />
+              <DailyRecordRow
+                key={record.date}
+                record={record}
+                games={games}
+                isToday={record.date === today}
+              />
             ))}
           </div>
         )}
@@ -298,9 +234,7 @@ function GameStatRow({ stat }: { stat: GameStat }) {
         onClick={() => setExpanded(v => !v)}
         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors active:bg-gray-100"
       >
-        {/* 색상 인디케이터 — 둥근 바 */}
         <div className="w-1 h-7 rounded-full shrink-0" style={{ backgroundColor: stat.game.color }} />
-
         <div className="flex-1 flex items-center justify-between">
           <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
           <div className="flex items-center gap-3">
@@ -339,7 +273,7 @@ function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games
 
   return (
     <div className={cn(
-      'bg-white rounded-2xl border overflow-hidden transition-all',
+      'bg-white rounded-2xl border overflow-hidden',
       isToday ? 'border-gray-300' : 'border-gray-200'
     )}>
       <button
@@ -353,14 +287,13 @@ function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games
           )}
         </div>
         <div className="flex items-center gap-3">
-          {/* 게임별 완료 dot */}
           <div className="flex items-center gap-1">
             {games.map(game => {
               const r = record.results.find(r => r.game_id === game.id)
               return (
                 <div
                   key={game.id}
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                  className="w-5 h-5 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: r ? game.color + '33' : '#f3f4f6' }}
                   title={game.name}
                 >

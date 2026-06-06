@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Game, GameResult, User } from '@/types'
 import { cn } from '@/lib/utils'
-import { UserPlus, UserMinus, X } from 'lucide-react'
+import { UserPlus, UserMinus, X, UserCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface RankingEntry {
@@ -237,6 +238,16 @@ export default function RankingTable({
                   <X size={18} className="text-gray-400" />
                 </button>
               </div>
+
+              {/* 프로필 보기 */}
+              <Link
+                href={`/users/${encodeURIComponent(selectedEntry.user.nickname)}`}
+                onClick={() => setSelectedEntry(null)}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm active:opacity-70 transition-opacity mb-2"
+              >
+                <UserCircle size={16} />
+                프로필 보기
+              </Link>
 
               {actionError && (
                 <p className="text-xs text-red-500 mb-3">{actionError}</p>
