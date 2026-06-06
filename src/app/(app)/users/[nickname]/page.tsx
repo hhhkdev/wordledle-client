@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, FormEvent } from 'react'
 import { useParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { Game, GameResult, User } from '@/types'
-import { CheckCircle2, XCircle, Minus, ChevronDown } from 'lucide-react'
+import { CheckCircle2, XCircle, Minus, ChevronDown, UserPlus, UserMinus, Pencil, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
 
 interface DailyRecord {
   date: string
@@ -51,14 +53,25 @@ function calcStreak(dates: string[], completedDates: Set<string>): number {
 
 export default function UserProfilePage() {
   const { nickname } = useParams<{ nickname: string }>()
-  const { user: me } = useAuth()
+  const { user: me, login: setMe } = useAuth()
   const [profileUser, setProfileUser] = useState<User | null>(null)
   const [games, setGames] = useState<Game[]>([])
   const [allResults, setAllResults] = useState<(GameResult & { game: Game })[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
+  // 친구 상태
+  const [isFriend, setIsFriend] = useState(false)
+  const [friendLoading, setFriendLoading] = useState(false)
+
+  // 닉네임 편집 (본인만)
+  const [editingNick, setEditingNick] = useState(false)
+  const [newNickname, setNewNickname] = useState('')
+  const [nickError, setNickError] = useState('')
+  const [nickLoading, setNickLoading] = useState(false)
+
   const decodedNickname = decodeURIComponent(nickname)
+  const isMe = me?.nickname === decodedNickname
 
   useEffect(() => {
     async function load() {
@@ -67,41 +80,38 @@ export default function UserProfilePage() {
         supabase.from('users').select('id, nickname, created_at').eq('nickname', decodedNickname).single(),
         supabase.from('games').select('*').order('name'),
       ])
-
       if (!userData) { setNotFound(true); setLoading(false); return }
       setProfileUser(userData as User)
       if (gamesData) setGames(gamesData as Game[])
 
       const { data: resultsData } = await supabase
-        .from('results')
-        .select('*, game:games(*)')
-        .eq('user_id', userData.id)
-        .order('date', { ascending: false })
-
+        .from('results').select('*, game:games(*)')
+        .eq('user_id', userData.id).order('date', { ascending: false })
       if (resultsData) setAllResults(resultsData as (GameResult & { game: Game })[])
+
+      // 친구 여부 확인
+      if (me && userData.id !== me.id) {
+        const { data: friendData } = await supabase
+          .from('friends').select('id').eq('user_id', me.id).eq('friend_id', userData.id).maybeSingle()
+        setIsFriend(!!friendData)
+      }
+
       setLoading(false)
     }
     load()
-  }, [decodedNickname])
+  }, [decodedNickname, me])
 
   const recentDates = getRecentDates(30)
-
   const byDate = new Map<string, (GameResult & { game: Game })[]>()
   for (const r of allResults) {
     if (!byDate.has(r.date)) byDate.set(r.date, [])
     byDate.get(r.date)!.push(r)
   }
-
   const dailyRecords: DailyRecord[] = recentDates
     .filter(d => byDate.has(d))
     .map(d => {
       const results = byDate.get(d)!
-      return {
-        date: d,
-        results,
-        completedCount: results.filter(r => r.completed).length,
-        totalScore: results.reduce((s, r) => s + (r.score ?? 0), 0),
-      }
+      return { date: d, results, completedCount: results.filter(r => r.completed).length, totalScore: results.reduce((s, r) => s + (r.score ?? 0), 0) }
     })
 
   const gameStats: GameStat[] = games.map(game => {
@@ -110,30 +120,59 @@ export default function UserProfilePage() {
     const attempts = completed.filter(r => r.attempts !== null).map(r => r.attempts!)
     const completedDates = new Set(completed.map(r => r.date))
     return {
-      game,
-      totalPlayed: rs.length,
-      totalCompleted: completed.length,
+      game, totalPlayed: rs.length, totalCompleted: completed.length,
       totalScore: rs.reduce((sum, r) => sum + (r.score ?? 0), 0),
-      avgAttempts: attempts.length
-        ? Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length * 10) / 10
-        : null,
+      avgAttempts: attempts.length ? Math.round(attempts.reduce((a, b) => a + b, 0) / attempts.length * 10) / 10 : null,
       bestAttempts: attempts.length ? Math.min(...attempts) : null,
       currentStreak: calcStreak(recentDates, completedDates),
     }
   })
 
   const today = getKSTDate()
-  const todayResults = byDate.get(today) ?? []
-  const todayCompleted = todayResults.filter(r => r.completed).length
-  const isMe = me?.id === profileUser?.id
+  const todayCompleted = (byDate.get(today) ?? []).filter(r => r.completed).length
+
+  async function handleAddFriend() {
+    if (!me || !profileUser) return
+    setFriendLoading(true)
+    await createClient().from('friends').insert({ user_id: me.id, friend_id: profileUser.id })
+    setIsFriend(true)
+    setFriendLoading(false)
+  }
+
+  async function handleRemoveFriend() {
+    if (!me || !profileUser) return
+    setFriendLoading(true)
+    await createClient().from('friends').delete().eq('user_id', me.id).eq('friend_id', profileUser.id)
+    setIsFriend(false)
+    setFriendLoading(false)
+  }
+
+  async function handleNicknameChange(e: FormEvent) {
+    e.preventDefault()
+    if (!me || !newNickname.trim()) return
+    if (newNickname.trim() === me.nickname) { setEditingNick(false); return }
+    if (newNickname.trim().length < 2 || newNickname.trim().length > 16) {
+      setNickError('닉네임은 2~16자여야 합니다.'); return
+    }
+    setNickLoading(true); setNickError('')
+    const supabase = createClient()
+    const { data: existing } = await supabase.from('users').select('id').eq('nickname', newNickname.trim()).single()
+    if (existing) { setNickError('이미 사용 중인 닉네임입니다.'); setNickLoading(false); return }
+    const { data, error } = await supabase.from('users').update({ nickname: newNickname.trim() }).eq('id', me.id).select('id, nickname, created_at').single()
+    setNickLoading(false)
+    if (error || !data) { setNickError('변경에 실패했습니다.'); return }
+    setMe(data as typeof me)
+    setEditingNick(false)
+    // URL도 새 닉네임으로 교체
+    window.history.replaceState(null, '', `/users/${encodeURIComponent(data.nickname)}`)
+    setProfileUser(data as User)
+  }
 
   if (loading) return (
     <div className="max-w-2xl mx-auto">
       <div className="h-32 rounded-2xl bg-gray-100 animate-pulse mb-5" />
       <div className="flex flex-col gap-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />
-        ))}
+        {Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 rounded-2xl bg-gray-100 animate-pulse" />)}
       </div>
     </div>
   )
@@ -150,41 +189,95 @@ export default function UserProfilePage() {
     <div className="max-w-2xl mx-auto">
       {/* 프로필 헤더 */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-5">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
               {isMe ? '내 프로필' : '유저 프로필'}
             </p>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-gray-900">{profileUser?.nickname}</h1>
-              {isMe && (
-                <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">나</span>
-              )}
-            </div>
+
+            {isMe && editingNick ? (
+              <form onSubmit={handleNicknameChange} className="flex items-start gap-2 mt-1">
+                <div>
+                  <Input
+                    value={newNickname}
+                    onChange={e => { setNewNickname(e.target.value); setNickError('') }}
+                    placeholder={me!.nickname}
+                    error={nickError}
+                    autoFocus
+                    className="text-xl font-black h-10"
+                  />
+                </div>
+                <div className="flex gap-1 mt-0.5">
+                  <Button type="submit" size="sm" loading={nickLoading} className="bg-gray-900! hover:bg-gray-700!">
+                    <Check size={14} />
+                  </Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => { setEditingNick(false); setNickError('') }}>
+                    <X size={14} />
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black text-gray-900 truncate">{profileUser?.nickname}</h1>
+                {isMe && (
+                  <>
+                    <span className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">나</span>
+                    <button
+                      onClick={() => { setNewNickname(me!.nickname); setEditingNick(true) }}
+                      className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
             <p className="text-xs text-gray-400 mt-1">
-              {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', {
-                year: 'numeric', month: 'long', day: 'numeric',
-              })} 가입
+              {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
             </p>
           </div>
 
-          <div className="text-center bg-gray-50 rounded-2xl px-6 py-4">
+          {/* 오늘 완료 현황 */}
+          <div className="text-center bg-gray-50 rounded-2xl px-5 py-3 shrink-0">
             <p className="text-3xl font-black text-gray-900">
-              {todayCompleted}
-              <span className="text-xl text-gray-300 font-bold">/{games.length}</span>
+              {todayCompleted}<span className="text-xl text-gray-300 font-bold">/{games.length}</span>
             </p>
             <p className="text-xs font-semibold text-gray-400 mt-0.5">오늘 완료</p>
           </div>
         </div>
+
+        {/* 친구 버튼 (타인 프로필 + 로그인 상태) */}
+        {!isMe && me && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            {isFriend ? (
+              <button
+                onClick={handleRemoveFriend}
+                disabled={friendLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-500 text-sm font-bold active:opacity-70 transition-opacity disabled:opacity-50"
+              >
+                <UserMinus size={15} />
+                {friendLoading ? '처리 중...' : '친구 삭제'}
+              </button>
+            ) : (
+              <button
+                onClick={handleAddFriend}
+                disabled={friendLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-bold active:opacity-70 transition-opacity disabled:opacity-50"
+              >
+                <UserPlus size={15} />
+                {friendLoading ? '처리 중...' : '친구 추가'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 게임별 통계 */}
       <section className="mb-5">
         <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-100">
-          {gameStats.map(stat => (
-            <GameStatRow key={stat.game.id} stat={stat} />
-          ))}
+          {gameStats.map(stat => <GameStatRow key={stat.game.id} stat={stat} />)}
         </div>
       </section>
 
@@ -199,12 +292,7 @@ export default function UserProfilePage() {
         ) : (
           <div className="flex flex-col gap-2">
             {dailyRecords.map(record => (
-              <DailyRecordRow
-                key={record.date}
-                record={record}
-                games={games}
-                isToday={record.date === today}
-              />
+              <DailyRecordRow key={record.date} record={record} games={games} isToday={record.date === today} />
             ))}
           </div>
         )}
@@ -224,10 +312,7 @@ function StatItem({ label, value }: { label: string; value: string }) {
 
 function GameStatRow({ stat }: { stat: GameStat }) {
   const [expanded, setExpanded] = useState(false)
-  const completionRate = stat.totalPlayed
-    ? Math.round(stat.totalCompleted / stat.totalPlayed * 100)
-    : 0
-
+  const completionRate = stat.totalPlayed ? Math.round(stat.totalCompleted / stat.totalPlayed * 100) : 0
   return (
     <div>
       <button
@@ -239,29 +324,18 @@ function GameStatRow({ stat }: { stat: GameStat }) {
           <span className="text-sm font-bold text-gray-900">{stat.game.name}</span>
           <div className="flex items-center gap-3">
             <span className="text-base font-black tabular-nums" style={{ color: stat.game.color }}>
-              {stat.totalScore}
-              <span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
+              {stat.totalScore}<span className="text-xs font-semibold text-gray-400 ml-0.5">점</span>
             </span>
-            <ChevronDown
-              size={15}
-              className={cn('text-gray-300 transition-transform shrink-0', expanded && 'rotate-180')}
-            />
+            <ChevronDown size={15} className={cn('text-gray-300 transition-transform shrink-0', expanded && 'rotate-180')} />
           </div>
         </div>
       </button>
-
       {expanded && (
         <div className="grid grid-cols-2 gap-y-3 gap-x-6 px-5 py-4 bg-gray-50/60 border-t border-gray-100">
           <StatItem label="완료" value={`${stat.totalCompleted}회`} />
           <StatItem label="완료율" value={stat.totalPlayed ? `${completionRate}%` : '-'} />
-          <StatItem
-            label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'}
-            value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'}
-          />
-          <StatItem
-            label="연속"
-            value={stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'}
-          />
+          <StatItem label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'} value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'} />
+          <StatItem label="연속" value={stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'} />
         </div>
       )}
     </div>
@@ -270,50 +344,30 @@ function GameStatRow({ stat }: { stat: GameStat }) {
 
 function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games: Game[]; isToday: boolean }) {
   const [open, setOpen] = useState(isToday)
-
   return (
-    <div className={cn(
-      'bg-white rounded-2xl border overflow-hidden',
-      isToday ? 'border-gray-300' : 'border-gray-200'
-    )}>
+    <div className={cn('bg-white rounded-2xl border overflow-hidden', isToday ? 'border-gray-300' : 'border-gray-200')}>
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-gray-700">{formatDate(record.date)}</span>
-          {isToday && (
-            <span className="text-xs font-semibold bg-gray-900 text-white px-2 py-0.5 rounded-full">오늘</span>
-          )}
+          {isToday && <span className="text-xs font-semibold bg-gray-900 text-white px-2 py-0.5 rounded-full">오늘</span>}
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
             {games.map(game => {
               const r = record.results.find(r => r.game_id === game.id)
               return (
-                <div
-                  key={game.id}
-                  className="w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: r ? game.color + '33' : '#f3f4f6' }}
-                  title={game.name}
-                >
-                  {r?.completed ? (
-                    <CheckCircle2 size={12} style={{ color: game.color }} />
-                  ) : r ? (
-                    <XCircle size={12} className="text-red-400" />
-                  ) : (
-                    <Minus size={10} className="text-gray-300" />
-                  )}
+                <div key={game.id} className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: r ? game.color + '33' : '#f3f4f6' }} title={game.name}>
+                  {r?.completed ? <CheckCircle2 size={12} style={{ color: game.color }} /> : r ? <XCircle size={12} className="text-red-400" /> : <Minus size={10} className="text-gray-300" />}
                 </div>
               )
             })}
           </div>
-          <span className="text-xs font-bold text-gray-500">
-            {record.completedCount}/{games.length}
-          </span>
+          <span className="text-xs font-bold text-gray-500">{record.completedCount}/{games.length}</span>
         </div>
       </button>
-
       {open && (
         <div className="px-4 pb-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3">
           {record.results.map(r => (
@@ -321,18 +375,10 @@ function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games
               <span className="font-semibold text-gray-700">{r.game?.name}</span>
               <div className="flex items-center gap-2">
                 {r.completed ? (
-                  <>
-                    {r.attempts !== null && (
-                      <span className="text-xs text-gray-500">
-                        {r.attempts}{r.max_attempts ? `/${r.max_attempts}` : ''}회
-                      </span>
-                    )}
+                  <>{r.attempts !== null && <span className="text-xs text-gray-500">{r.attempts}{r.max_attempts ? `/${r.max_attempts}` : ''}회</span>}
                     <span className="text-xs font-bold text-gray-900">{r.score}점</span>
-                    <CheckCircle2 size={14} className="text-green-500" />
-                  </>
-                ) : (
-                  <XCircle size={14} className="text-red-400" />
-                )}
+                    <CheckCircle2 size={14} className="text-green-500" /></>
+                ) : <XCircle size={14} className="text-red-400" />}
               </div>
             </div>
           ))}

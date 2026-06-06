@@ -218,10 +218,10 @@ export default function HomePage() {
                     isMe ? 'bg-blue-100 text-blue-600' : 'bg-amber-100 text-amber-600'
                   )}>1</div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn('text-lg font-black truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
+                    <Link href={`/users/${encodeURIComponent(e.user.nickname)}`} className={cn('text-lg font-black truncate hover:underline', isMe ? 'text-blue-800' : 'text-gray-900')}>
                       {e.user.nickname}
                       {isMe && <span className="ml-1.5 text-sm text-blue-400 font-normal">나</span>}
-                    </p>
+                    </Link>
                   </div>
                   <div className="text-right shrink-0">
                     <p className={cn('text-2xl font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
@@ -249,10 +249,10 @@ export default function HomePage() {
                     'w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-sm font-black',
                     isMe ? 'bg-blue-100 text-blue-600' : (RANK_BADGE_STYLES[rank - 1] ?? 'bg-gray-50 text-gray-400')
                   )}>{rank}</div>
-                  <span className={cn('flex-1 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-800')}>
+                  <Link href={`/users/${encodeURIComponent(entry.user.nickname)}`} className={cn('flex-1 text-sm font-bold truncate hover:underline', isMe ? 'text-blue-800' : 'text-gray-800')}>
                     {entry.user.nickname}
                     {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
-                  </span>
+                  </Link>
                   <div className="text-right shrink-0">
                     <p className={cn('text-base font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
                       {entry.totalScore}<span className={cn('text-xs font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점</span>

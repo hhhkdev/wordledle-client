@@ -12,9 +12,6 @@ const NAV_ITEMS = [
   { href: '/friends', label: '친구', icon: Users },
 ]
 
-const AUTH_NAV_ITEMS = [
-  { href: '/mypage', label: '마이페이지', icon: UserCircle },
-]
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -66,21 +63,18 @@ export default function Navbar() {
                   <span className="hidden sm:inline">어드민</span>
                 </Link>
               )}
-              {AUTH_NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors',
-                    pathname.startsWith(href)
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-                  )}
-                >
-                  <Icon size={16} />
-                  <span className="hidden sm:inline">{label}</span>
-                </Link>
-              ))}
+              <Link
+                href={`/users/${encodeURIComponent(user.nickname)}`}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold transition-colors',
+                  pathname.startsWith('/users/')
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
+                )}
+              >
+                <UserCircle size={16} />
+                <span className="hidden sm:inline">{user.nickname}</span>
+              </Link>
               <button
                 onClick={handleLogout}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"

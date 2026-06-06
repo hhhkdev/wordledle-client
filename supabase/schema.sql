@@ -101,19 +101,19 @@ values
   (
     'Word Hurdle 4-letter', 'wordhurdle-4',
     'https://solitaired.com/wordhurdle-4-letter',
-    '4글자 영단어 맞추기', '💙', '#1A73E8',
+    '4글자 영단어 맞추기', '💙', '#1e3a5f',
     'Word Hurdle 4-letter 3201 4/6 #wordhurdle', null
   ),
   (
     'Word Hurdle 5-letter', 'wordhurdle-5',
     'https://solitaired.com/wordhurdle-5-letter',
-    '5글자 영단어 맞추기', '💙', '#1A73E8',
+    '5글자 영단어 맞추기', '💙', '#1e3a5f',
     'Word Hurdle 5-letter 3201 3/6 #wordhurdle', null
   ),
   (
     'Word Hurdle', 'wordhurdle-6',
     'https://solitaired.com/wordhurdle',
-    '6글자 영단어 맞추기', '💙', '#1A73E8',
+    '6글자 영단어 맞추기', '💙', '#1e3a5f',
     'Word Hurdle 3201 5/6 #wordhurdle', null
   )
 on conflict (slug) do update set
