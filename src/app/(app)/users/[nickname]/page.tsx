@@ -240,7 +240,7 @@ export default function UserProfilePage() {
           </div>
 
           {/* 오늘 완료 · 총점 */}
-          <div className="flex flex-col gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0">
             <div className="text-center bg-gray-50 rounded-2xl px-4 py-2.5">
               <p className="text-2xl font-black text-gray-900">
                 {todayCompleted}<span className="text-base text-gray-300 font-bold">/{games.length}</span>
