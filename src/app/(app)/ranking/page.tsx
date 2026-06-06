@@ -81,7 +81,7 @@ function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null, s
       b.results.reduce((s, r) => s + (r.attempts ?? 0), 0)
     )
   }
-  if (sortKey === 'score') return [...entries].sort((a, b) => b.totalScore - a.totalScore)
+  if (sortKey === 'score') return [...entries].sort((a, b) => b.totalScore - a.totalScore || b.completedCount - a.completedCount)
   return [...entries].sort((a, b) =>
     b.completedCount !== a.completedCount ? b.completedCount - a.completedCount : b.totalScore - a.totalScore
   )
@@ -99,7 +99,7 @@ export default function RankingPage() {
   const [games, setGames] = useState<Game[]>([])
   const [filter, setFilter] = useState<FilterState>(makeDefaultFilter)        // 시트 draft
   const [appliedFilter, setAppliedFilter] = useState<FilterState>(makeDefaultFilter) // 실제 쿼리용
-  const [sortKey, setSortKey] = useState<SortKey>('completed')
+  const [sortKey, setSortKey] = useState<SortKey>('score')
   const [globalEntries, setGlobalEntries] = useState<RankingEntry[]>([])
   const [friendEntries, setFriendEntries] = useState<RankingEntry[]>([])
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
