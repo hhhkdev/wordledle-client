@@ -315,39 +315,39 @@ function GameStatCard({ stat }: { stat: GameStat }) {
   const completionRate = stat.totalPlayed ? Math.round(stat.totalCompleted / stat.totalPlayed * 100) : 0
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      {/* 컬러 상단 바 */}
-      <div className="h-1" style={{ backgroundColor: stat.game.color }} />
-
+    <div className="rounded-2xl border border-gray-100 overflow-hidden">
+      {/* 상단: 흰 배경 — 점수·완료 */}
       <button
         onClick={() => setExpanded(v => !v)}
-        className="w-full text-left px-3.5 pt-3 pb-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+        className="w-full text-left bg-white px-3.5 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
       >
-        {/* 게임명 */}
-        <p className="text-xs font-semibold text-gray-400 truncate mb-1">{stat.game.name}</p>
-
-        {/* 점수 강조 */}
-        <p className="text-2xl font-black tabular-nums leading-none" style={{ color: stat.game.color }}>
+        <p className="text-2xl font-black tabular-nums leading-none text-gray-900">
           {stat.totalScore}
           <span className="text-sm font-semibold text-gray-400 ml-0.5">점</span>
         </p>
-
-        {/* 완료 현황 */}
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-gray-400">
-            {stat.totalCompleted}회 완료
-            {stat.totalPlayed > 0 && <span className="ml-1">· {completionRate}%</span>}
-          </p>
-          <ChevronDown size={13} className={cn('text-gray-300 transition-transform', expanded && 'rotate-180')} />
-        </div>
+        <p className="text-xs text-gray-400 mt-1.5">
+          {stat.totalCompleted}회 완료
+          {stat.totalPlayed > 0 && <span className="ml-1">· {completionRate}%</span>}
+        </p>
       </button>
 
+      {/* 상세 펼침 */}
       {expanded && (
-        <div className="grid grid-cols-2 gap-y-2.5 px-3.5 py-3 bg-gray-50/60 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-y-2.5 px-3.5 py-3 bg-gray-50 border-t border-gray-100">
           <StatItem label={stat.game.slug === 'kkomanttle' ? '평균 추측' : '평균 시도'} value={stat.avgAttempts !== null ? `${stat.avgAttempts}회` : '-'} />
           <StatItem label="연속" value={stat.currentStreak > 0 ? `${stat.currentStreak}일` : '-'} />
         </div>
       )}
+
+      {/* 하단: 게임 컬러 배경 — 게임명 */}
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5"
+        style={{ backgroundColor: stat.game.color }}
+      >
+        <p className="text-sm font-black text-white leading-tight truncate">{stat.game.name}</p>
+        <ChevronDown size={13} className={cn('text-white/60 shrink-0 ml-1 transition-transform', expanded && 'rotate-180')} />
+      </button>
     </div>
   )
 }
