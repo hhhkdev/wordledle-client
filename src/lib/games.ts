@@ -85,10 +85,10 @@ export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [
  * - wordle: 미국 동부 자정 기준 (America/New_York)
  * - 나머지: 한국 자정 기준 (Asia/Seoul)
  */
-export function getGameCurrentPeriodStart(slug: string): string {
-  if (slug === 'wordle') {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
-  }
+export function getGameCurrentPeriodStart(_slug: string): string {
+  // 결과 저장 시 항상 KST 날짜를 사용하므로, 기간 시작점도 KST로 통일
+  // Wordle은 뉴욕 자정(KST 13~14시)에 초기화되지만, 결과 date는 KST 기준으로 저장됨
+  // 뉴욕 시간대를 쓰면 자정~13시 사이에 어제 결과가 오늘 완료로 잘못 표시되는 버그 발생
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
 }
 
