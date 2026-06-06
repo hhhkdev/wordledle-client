@@ -163,9 +163,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 오늘·어제 랭킹 */}
+      {/* 이번 회차 랭킹 */}
       <div className="mt-8">
-        {/* 헤더 + 탭 한 줄 */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
@@ -174,14 +173,9 @@ export default function HomePage() {
             </h2>
             <div className="flex gap-0.5 bg-gray-100 p-0.5 rounded-lg">
               {(['today', 'yesterday'] as const).map(t => (
-                <button
-                  key={t}
-                  onClick={() => setRankingTab(t)}
-                  className={cn(
-                    'px-3 py-1 rounded-md text-xs font-semibold transition-colors',
-                    rankingTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400'
-                  )}
-                >
+                <button key={t} onClick={() => setRankingTab(t)}
+                  className={cn('px-3 py-1 rounded-md text-xs font-semibold transition-colors',
+                    rankingTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400')}>
                   {t === 'today' ? '오늘' : '어제'}
                 </button>
               ))}
@@ -192,80 +186,99 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {(rankingTab === 'today' ? todayRanking : yesterdayRanking).length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 py-10 text-center text-gray-300 text-sm">
-            아직 결과가 없어요
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
-            {(rankingTab === 'today' ? todayRanking : yesterdayRanking).map((entry, idx) => {
-              const rank = idx + 1
-              const isMe = entry.user.id === user?.id
-              const badgeStyle = isMe
-                ? 'bg-blue-100 text-blue-600'
-                : rank === 1 ? 'bg-amber-400 text-white'
-                : rank === 2 ? 'bg-gray-300 text-white'
-                : rank === 3 ? 'bg-orange-300 text-white'
-                : 'bg-gray-100 text-gray-400'
-              return (
-                <Link
-                  key={entry.user.id}
-                  href={`/users/${encodeURIComponent(entry.user.nickname)}`}
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors',
-                    isMe && 'bg-blue-50 hover:bg-blue-50/80'
-                  )}
-                >
-                  {/* 순위 뱃지 */}
-                  <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-sm font-black', badgeStyle)}>
-                    {rank}
-                  </div>
+        {(() => {
+          const base = rankingTab === 'today' ? todayRanking : yesterdayRanking
+          if (base.length === 0) return (
+            <div className="bg-white rounded-2xl border border-gray-100 py-10 text-center text-gray-300 text-sm">
+              아직 결과가 없어요
+            </div>
+          )
+          const byScore = [...base].sort((a, b) => b.totalScore - a.totalScore || b.completedCount - a.completedCount)
+          const byCount = [...base].sort((a, b) => b.completedCount - a.completedCount || b.totalScore - a.totalScore)
 
-                  {/* 닉네임 */}
-                  <span className={cn('w-24 shrink-0 text-sm font-bold truncate', isMe ? 'text-blue-800' : 'text-gray-900')}>
-                    {entry.user.nickname}
-                    {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
-                  </span>
-
-                  {/* 게임 완료 도트 */}
-                  <div className="flex-1 flex items-center gap-1 flex-wrap">
-                    {games.map(game => {
-                      const gr = entry.gameResults.find(r => r.game_id === game.id)
-                      return (
-                        <div
-                          key={game.id}
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{
-                            backgroundColor: gr?.completed
-                              ? game.color
-                              : gr
-                              ? '#fca5a5'
-                              : '#e5e7eb',
-                          }}
-                          title={game.name}
-                        />
-                      )
-                    })}
-                  </div>
-
-                  {/* 점수 */}
-                  <div className="text-right shrink-0">
-                    <span className={cn('text-base font-black tabular-nums', isMe ? 'text-blue-700' : 'text-gray-900')}>
-                      {entry.totalScore}
-                    </span>
-                    <span className={cn('text-xs font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점</span>
-                    <p className={cn('text-xs', isMe ? 'text-blue-400' : 'text-gray-400')}>
-                      {entry.completedCount}/{totalGames} 완료
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
+          return (
+            <div className="grid grid-cols-2 gap-3">
+              {/* 완료 랭킹 */}
+              <RankPanel
+                title="완료 횟수"
+                entries={byCount}
+                currentUserId={user?.id}
+                totalGames={totalGames}
+                valueKey="completed"
+              />
+              {/* 점수 랭킹 */}
+              <RankPanel
+                title="점수"
+                entries={byScore}
+                currentUserId={user?.id}
+                totalGames={totalGames}
+                valueKey="score"
+              />
+            </div>
+          )
+        })()}
       </div>
 
       <Announcements />
+    </div>
+  )
+}
+
+interface RankPanelEntry {
+  user: User
+  completedCount: number
+  totalScore: number
+}
+
+function RankPanel({ title, entries, currentUserId, totalGames, valueKey }: {
+  title: string
+  entries: RankPanelEntry[]
+  currentUserId?: string
+  totalGames: number
+  valueKey: 'score' | 'completed'
+}) {
+  const rankColors = ['text-amber-500', 'text-gray-400', 'text-orange-400']
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="px-3 py-2 border-b border-gray-50">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{title}</p>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {entries.slice(0, 5).map((entry, idx) => {
+          const rank = idx + 1
+          const isMe = entry.user.id === currentUserId
+          const value = valueKey === 'score' ? entry.totalScore : entry.completedCount
+          const unit = valueKey === 'score' ? '점' : `/${totalGames}`
+          const valueColor = valueKey === 'score'
+            ? (isMe ? 'text-blue-600' : 'text-indigo-500')
+            : (isMe ? 'text-blue-600' : 'text-teal-500')
+
+          return (
+            <Link
+              key={entry.user.id}
+              href={`/users/${encodeURIComponent(entry.user.nickname)}`}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 hover:bg-gray-50 active:bg-gray-100 transition-colors',
+                isMe && 'bg-blue-50 hover:bg-blue-50/80'
+              )}
+            >
+              <span className={cn('w-5 text-center text-sm font-black shrink-0',
+                isMe ? 'text-blue-400' : (rankColors[rank - 1] ?? 'text-gray-300'))}>
+                {rank}
+              </span>
+              <span className={cn('flex-1 text-sm font-bold truncate min-w-0',
+                isMe ? 'text-blue-800' : 'text-gray-900')}>
+                {entry.user.nickname}
+                {isMe && <span className="ml-1 text-xs text-blue-400 font-normal">나</span>}
+              </span>
+              <span className={cn('text-base font-black tabular-nums shrink-0', valueColor)}>
+                {value}<span className="text-xs font-semibold text-gray-400 ml-0.5">{unit}</span>
+              </span>
+            </Link>
+          )
+        })}
+      </div>
     </div>
   )
 }
