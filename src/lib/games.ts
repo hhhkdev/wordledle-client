@@ -257,6 +257,10 @@ export function parseGameResult(
       }
     }
 
+    // 워들들은 게임 페이지에서 결과를 자동 저장 — 수동 입력 불필요
+    case 'wordledle':
+      return null
+
     default:
       return null
   }

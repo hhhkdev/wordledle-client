@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { CheckCircle2, Edit3, XCircle, ExternalLink, Plus, X, ChevronRight, LogIn } from 'lucide-react'
+import { CheckCircle2, Edit3, XCircle, ExternalLink, Plus, X, ChevronRight, LogIn, Gamepad2 } from 'lucide-react'
 import { Game, GameResult } from '@/types'
 import { useAuth } from '@/contexts/AuthContext'
 import ResultModal from './ResultModal'
@@ -126,28 +126,41 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
               <X size={13} />
             </button>
             {game.url && (
-              <Link href={game.url} target="_blank" rel="noopener noreferrer"
-                onClick={e => { e.stopPropagation(); setShowChoice(false) }}
-                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
-              >
-                <ExternalLink size={14} />게임하기
-              </Link>
+              game.url.startsWith('/') ? (
+                // 내부 게임 — 같은 탭으로 이동, 결과는 게임 페이지에서 자동 저장
+                <Link href={game.url}
+                  onClick={e => { e.stopPropagation(); setShowChoice(false) }}
+                  className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
+                >
+                  <Gamepad2 size={14} />플레이하기
+                </Link>
+              ) : (
+                <Link href={game.url} target="_blank" rel="noopener noreferrer"
+                  onClick={e => { e.stopPropagation(); setShowChoice(false) }}
+                  className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
+                >
+                  <ExternalLink size={14} />게임하기
+                </Link>
+              )
             )}
-            {user ? (
-              <button
-                onClick={e => { e.stopPropagation(); setShowChoice(false); setModalOpen(true) }}
-                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
-              >
-                {hasResult ? <Edit3 size={14} /> : <Plus size={14} />}
-                {hasResult ? '결과 수정' : '결과 입력'}
-              </button>
-            ) : (
-              <Link href="/login"
-                onClick={e => { e.stopPropagation(); setShowChoice(false) }}
-                className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
-              >
-                <LogIn size={14} />로그인하여 기록
-              </Link>
+            {/* 외부 게임만 결과 수동 입력 — 내부 게임은 자동 저장 */}
+            {!game.url.startsWith('/') && (
+              user ? (
+                <button
+                  onClick={e => { e.stopPropagation(); setShowChoice(false); setModalOpen(true) }}
+                  className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
+                >
+                  {hasResult ? <Edit3 size={14} /> : <Plus size={14} />}
+                  {hasResult ? '결과 수정' : '결과 입력'}
+                </button>
+              ) : (
+                <Link href="/login"
+                  onClick={e => { e.stopPropagation(); setShowChoice(false) }}
+                  className="flex items-center justify-center gap-2 bg-white rounded-xl w-36 py-2.5 text-sm font-black text-gray-900 active:opacity-80 transition-opacity"
+                >
+                  <LogIn size={14} />로그인하여 기록
+                </Link>
+              )
             )}
           </div>
         )}

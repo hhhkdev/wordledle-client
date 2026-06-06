@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Trophy, Users, LogOut, LogIn, UserCircle, ShieldCheck } from 'lucide-react'
+import { Trophy, Users, LogOut, LogIn, UserCircle, ShieldCheck, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from './Logo'
 
 const NAV_ITEMS = [
+  { href: '/wordledle', label: '워들들', icon: Gamepad2 },
   { href: '/ranking', label: '랭킹', icon: Trophy },
   { href: '/friends', label: '친구', icon: Users },
 ]

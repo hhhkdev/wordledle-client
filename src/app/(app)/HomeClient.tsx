@@ -7,7 +7,7 @@ import { Game, GameResult, User } from '@/types'
 import GameCard from '@/components/game/GameCard'
 import Announcements from '@/components/Announcements'
 import Link from 'next/link'
-import { Trophy, ChevronRight } from 'lucide-react'
+import { Trophy, ChevronRight, Gamepad2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameCurrentPeriodStart } from '@/lib/games'
 
@@ -130,6 +130,9 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
         </div>
       )}
 
+      {/* 워들들 배너 */}
+      <WordledleBanner />
+
       {/* 게임 목록 */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
         {sortedGames.map(game => (
@@ -190,6 +193,56 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
 
       <Announcements />
     </div>
+  )
+}
+
+// ── 워들들 배너 ─────────────────────────────────────
+function WordledleBanner() {
+  const [played, setPlayed] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('wordledle_daily_v1')
+      if (!raw) { setPlayed(false); return }
+      const s = JSON.parse(raw)
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+      setPlayed(s.date === today && s.gameOver)
+    } catch { setPlayed(false) }
+  }, [])
+
+  return (
+    <Link href="/wordledle" className="block mb-5">
+      <div className={cn(
+        'relative overflow-hidden rounded-2xl p-5 flex items-center justify-between transition-all',
+        'hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]',
+        played
+          ? 'bg-gray-100 border border-gray-200'
+          : 'bg-gray-900 border border-gray-800',
+      )}>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Gamepad2 size={16} className={played ? 'text-gray-400' : 'text-green-400'} />
+            <span className={cn('text-xs font-bold', played ? 'text-gray-400' : 'text-green-400')}>
+              오늘의 워들들
+            </span>
+            {played && (
+              <span className="text-xs font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
+                완료
+              </span>
+            )}
+          </div>
+          <p className={cn('text-xl font-black', played ? 'text-gray-500' : 'text-white')}>
+            워들들
+          </p>
+          <p className={cn('text-xs mt-0.5', played ? 'text-gray-400' : 'text-gray-400')}>
+            {played ? '오늘 이미 플레이했어요' : '5글자 영단어 2개 · 10회 도전'}
+          </p>
+        </div>
+        <div className="text-3xl select-none">
+          {played ? '🟩' : '🟨'}
+        </div>
+      </div>
+    </Link>
   )
 }
 

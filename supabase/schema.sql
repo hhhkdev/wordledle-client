@@ -97,3 +97,8 @@ values
   ('Word Hurdle 5-letter','wordhurdle-5',  'https://solitaired.com/wordhurdle-5-letter',      '5글자 영단어 맞추기',         '💙', '#1e3a5f', 'Word Hurdle 5-letter 3201 3/6 #wordhurdle', null),
   ('Word Hurdle',         'wordhurdle-6',  'https://solitaired.com/wordhurdle',               '6글자 영단어 맞추기',         '💙', '#1e3a5f', 'Word Hurdle 3201 5/6 #wordhurdle',         null)
 on conflict (slug) do nothing;
+
+-- migration: 2026-06-07 — 워들들 자체 게임 추가
+insert into public.games (name, slug, url, description, emoji, color, result_format, image_url)
+values ('워들들', 'wordledle', '/wordledle', '5글자 영단어 2개 · 10회 도전', '🟩', '#1a1a2e', '', null)
+on conflict (slug) do nothing;

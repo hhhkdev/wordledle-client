@@ -277,12 +277,14 @@ export default function UserProfilePage() {
       </div>
 
       {/* 게임별 통계 */}
-      <section className="mb-5">
-        <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 items-start">
-          {gameStats.map(stat => <GameStatCard key={stat.game.id} stat={stat} />)}
-        </div>
-      </section>
+      {gameStats.some(s => s.totalPlayed > 0) && (
+        <section className="mb-5">
+          <h2 className="text-lg font-black text-gray-900 mb-3">게임별 통계</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 items-start">
+            {gameStats.filter(s => s.totalPlayed > 0).map(stat => <GameStatCard key={stat.game.id} stat={stat} />)}
+          </div>
+        </section>
+      )}
 
       {/* 날짜별 기록 */}
       <section>
