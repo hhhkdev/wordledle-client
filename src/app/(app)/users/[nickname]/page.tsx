@@ -130,6 +130,7 @@ export default function UserProfilePage() {
 
   const today = getKSTDate()
   const todayCompleted = (byDate.get(today) ?? []).filter(r => r.completed).length
+  const totalScore = gameStats.reduce((sum, s) => sum + s.totalScore, 0)
 
   async function handleAddFriend() {
     if (!me || !profileUser) return
@@ -196,22 +197,22 @@ export default function UserProfilePage() {
             </p>
 
             {isMe && editingNick ? (
-              <form onSubmit={handleNicknameChange} className="flex flex-col gap-1.5 mt-1">
-                <div className="flex items-center gap-2">
+              <form onSubmit={handleNicknameChange} className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
                   <input
                     value={newNickname}
                     onChange={e => { setNewNickname(e.target.value); setNickError('') }}
                     placeholder={me!.nickname}
                     autoFocus
-                    className="text-lg font-black h-9 px-3 rounded-xl border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 w-40"
+                    className="text-2xl font-black bg-transparent border-b-2 border-gray-900 focus:outline-none w-36 pb-0.5"
                   />
                   <button type="submit" disabled={nickLoading}
-                    className="h-9 w-9 flex items-center justify-center rounded-xl bg-gray-900 text-white hover:bg-gray-700 active:opacity-70 transition-colors disabled:opacity-50 shrink-0">
-                    <Check size={15} />
+                    className="p-1 rounded-full text-gray-400 hover:text-gray-900 transition-colors disabled:opacity-40">
+                    <Check size={16} strokeWidth={2.5} />
                   </button>
                   <button type="button" onClick={() => { setEditingNick(false); setNickError('') }}
-                    className="h-9 w-9 flex items-center justify-center rounded-xl bg-gray-100 text-gray-500 hover:bg-gray-200 active:opacity-70 transition-colors shrink-0">
-                    <X size={15} />
+                    className="p-1 rounded-full text-gray-300 hover:text-gray-600 transition-colors">
+                    <X size={16} strokeWidth={2.5} />
                   </button>
                 </div>
                 {nickError && <p className="text-xs text-red-500">{nickError}</p>}
@@ -238,12 +239,18 @@ export default function UserProfilePage() {
             </p>
           </div>
 
-          {/* 오늘 완료 현황 */}
-          <div className="text-center bg-gray-50 rounded-2xl px-5 py-3 shrink-0">
-            <p className="text-3xl font-black text-gray-900">
-              {todayCompleted}<span className="text-xl text-gray-300 font-bold">/{games.length}</span>
-            </p>
-            <p className="text-xs font-semibold text-gray-400 mt-0.5">오늘 완료</p>
+          {/* 오늘 완료 · 총점 */}
+          <div className="flex flex-col gap-2 shrink-0">
+            <div className="text-center bg-gray-50 rounded-2xl px-4 py-2.5">
+              <p className="text-2xl font-black text-gray-900">
+                {todayCompleted}<span className="text-base text-gray-300 font-bold">/{games.length}</span>
+              </p>
+              <p className="text-xs font-semibold text-gray-400 mt-0.5">오늘 완료</p>
+            </div>
+            <div className="text-center bg-gray-50 rounded-2xl px-4 py-2.5">
+              <p className="text-2xl font-black text-gray-900">{totalScore}</p>
+              <p className="text-xs font-semibold text-gray-400 mt-0.5">총 점수</p>
+            </div>
           </div>
         </div>
 
