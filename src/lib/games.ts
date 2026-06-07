@@ -100,11 +100,11 @@ export function getGameCurrentPeriodStart(_slug: string): string {
 // ── 점수 계산 헬퍼 ──────────────────────────────────────────
 
 /**
- * 클리어 점수: 기본 점수 + 절약한 시도 수 (실패 시 0)
- * 절약한 시도 = max_attempts - attempts
+ * 클리어 점수: 기본 점수 + 절약한 시도 수
+ * 실패(attempts === null, 즉 X/N) 시 기본 점수의 절반을 페널티로 적용
  */
 function scoreCleared(attempts: number | null, maxAttempts: number, basePoints: number): number {
-  if (attempts === null) return 0
+  if (attempts === null) return -Math.floor(basePoints / 2)
   return basePoints + (maxAttempts - attempts)
 }
 
@@ -235,7 +235,7 @@ export function parseGameResult(
       const maxAttempts = parseInt(wh6Match[3])
       const completed = attempts <= maxAttempts
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : 0,
+        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
         attempts,
         max_attempts: maxAttempts,
         completed,
@@ -254,7 +254,7 @@ export function parseGameResult(
       const completed = attempts <= maxAttempts
 
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : 0,
+        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
         attempts,
         max_attempts: maxAttempts,
         completed,

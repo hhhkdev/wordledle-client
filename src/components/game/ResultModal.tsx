@@ -109,6 +109,9 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
             <>
               <p className="text-3xl mb-2">😔</p>
               <p className="text-sm font-semibold text-gray-700">오늘은 아쉽게도 실패했어요</p>
+              {savedResult.score !== 0 && (
+                <p className="text-sm font-black text-red-400 mt-1">{savedResult.score}점</p>
+              )}
               <p className="text-xs text-gray-400 mt-1">결과가 기록됐어요</p>
             </>
           )}
@@ -141,6 +144,9 @@ export default function ResultModal({ game, open, onClose, existingResult, onSuc
         <Button type="submit" size="lg" loading={loading} className="w-full">
           {existingResult ? '결과 수정' : '결과 저장'}
         </Button>
+        <p className="text-xs text-center text-gray-400">
+          점수는 재미를 위한 것이에요. 솔직한 입력 부탁드려요.
+        </p>
       </form>
     </Modal>
   )

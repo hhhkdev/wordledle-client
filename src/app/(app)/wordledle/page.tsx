@@ -65,13 +65,19 @@ function clearSaved() {
 }
 
 // ── 점수 계산 ─────────────────────────────────────────
-function calcScore(word1Guesses: string[], word2Guesses: string[], words: [string, string]): number {
+function calcScore(word1Guesses: string[], word2Guesses: string[], words: [string, string], won: boolean): number {
   const solved1 = word1Guesses.some(g => g === words[0])
   const solved2 = word2Guesses.some(g => g === words[1])
   const wordScore = (solved1 ? 10 : 0) + (solved2 ? 10 : 0)
   const remaining = MAX_GUESSES - word1Guesses.length - word2Guesses.length
   const bonus = (solved1 && solved2) ? remaining : 0
-  return wordScore + bonus
+  // 실패 시 못 푼 단어당 -5 (시도는 했지만 정답을 못 맞힌 경우만)
+  let penalty = 0
+  if (!won) {
+    if (!solved1) penalty -= 5
+    if (!solved2 && word2Guesses.length > 0) penalty -= 5
+  }
+  return wordScore + bonus + penalty
 }
 
 // ── 보드 ──────────────────────────────────────────────
@@ -204,7 +210,7 @@ function ResultModal({ won, words, word1Guesses, word2Guesses, onClose }: {
   const [copied, setCopied] = useState(false)
   const solved1 = word1Guesses.some(g => g === words[0])
   const solved2 = word2Guesses.some(g => g === words[1])
-  const score = calcScore(word1Guesses, word2Guesses, words)
+  const score = calcScore(word1Guesses, word2Guesses, words, won)
   const total = word1Guesses.length + word2Guesses.length
 
   function buildShareText() {
@@ -244,7 +250,9 @@ function ResultModal({ won, words, word1Guesses, word2Guesses, onClose }: {
             <>
               <div className="text-4xl mb-2">💀</div>
               <p className="text-xl font-black text-gray-900">아쉬워요</p>
-              {score > 0 && <p className="text-sm text-gray-500 mt-1">{score}점 획득</p>}
+              <div className="mt-2 inline-flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-xl px-4 py-1.5">
+                <span className="text-red-500 text-sm font-black">{score}점</span>
+              </div>
             </>
           )}
         </div>
@@ -318,7 +326,7 @@ export default function WordledlePage() {
     const today = kstToday()
     const dayNum = Math.floor((new Date(today).getTime() - new Date(2026, 5, 1).getTime()) / 86400000)
     const totalGuesses = w1.length + w2.length
-    const score = calcScore(w1, w2, words)
+    const score = calcScore(w1, w2, words, didWin)
     await supabase.from('results').upsert({
       user_id: user.id,
       game_id: gameRow.id,

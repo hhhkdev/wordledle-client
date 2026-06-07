@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { MessageSquarePlus, RefreshCw } from 'lucide-react'
 import FeedbackModal from './FeedbackModal'
-
-const VERSION = 'v0.0.3'
+import { CURRENT_VERSION } from '@/lib/version'
 
 export default function Footer() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
@@ -25,7 +24,7 @@ export default function Footer() {
         <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-xs text-gray-400">
             <span className="font-black text-gray-500">WORDLEDLE</span>
-            <span>{VERSION}</span>
+            <span>{CURRENT_VERSION}</span>
             <span>·</span>
             <span>© 2026</span>
           </div>

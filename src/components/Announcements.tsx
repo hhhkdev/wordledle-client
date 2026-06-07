@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Megaphone, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CURRENT_VERSION } from '@/lib/version'
 
 type AnnouncementTag = '업데이트' | '공지' | '이벤트' | '점검'
 type TabKey = 'patch' | 'notice'
@@ -26,7 +27,7 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     date: '2026-06-07',
     tag: '업데이트',
-    title: 'v0.1.0 업데이트',
+    title: `${CURRENT_VERSION} 업데이트`,
     content:
       '워들들 자체 게임\n' +
       '• 오늘의 5글자 영단어 2개를 10번 안에 맞추는 게임\n' +
