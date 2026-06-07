@@ -14,6 +14,7 @@ interface GameCardProps {
   game: Game
   result?: GameResult | null
   onResultChange: (result: GameResult) => void
+  priority?: boolean
 }
 
 function isLightColor(hex: string) {
@@ -23,7 +24,7 @@ function isLightColor(hex: string) {
   return (r * 299 + g * 587 + b * 114) / 1000 > 160
 }
 
-export default function GameCard({ game, result, onResultChange }: GameCardProps) {
+export default function GameCard({ game, result, onResultChange, priority = false }: GameCardProps) {
   const { user } = useAuth()
   const [showChoice, setShowChoice] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -76,7 +77,8 @@ export default function GameCard({ game, result, onResultChange }: GameCardProps
             <Image src={imageUrl} alt={game.name} fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               className="object-cover" draggable={false}
-              unoptimized={!imageUrl.includes('.supabase.co')}
+              unoptimized
+              priority={priority}
               onError={() => setImgFailed(true)} />
             {hasResult && !showChoice && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/25">

@@ -7,7 +7,7 @@ import { Game, GameResult, User } from '@/types'
 import GameCard from '@/components/game/GameCard'
 import Announcements from '@/components/Announcements'
 import Link from 'next/link'
-import { Trophy, ChevronRight, Gamepad2 } from 'lucide-react'
+import { Trophy, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameCurrentPeriodStart } from '@/lib/games'
 
@@ -96,14 +96,16 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
       })
   }, [rankingVersion])
 
-  const completedCount = Object.values(currentResults).filter(r => r.completed).length
-  const totalGames = games.length
+  // 워들들은 별도 배너로 표시 — 게임 카드 목록과 완료 카운터에서 제외
+  const displayGames = games.filter(g => g.slug !== 'wordledle')
+  const completedCount = displayGames.filter(g => currentResults[g.id]?.completed).length
+  const totalGames = displayGames.length
 
   const todayStr = new Date().toLocaleDateString('ko-KR', {
     month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul',
   })
 
-  const sortedGames = [...games].sort((a, b) => {
+  const sortedGames = [...displayGames].sort((a, b) => {
     if (!user) return 0
     const aHas = !!currentResults[a.id]
     const bHas = !!currentResults[b.id]
@@ -135,11 +137,12 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
 
       {/* 게임 목록 */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
-        {sortedGames.map(game => (
+        {sortedGames.map((game, i) => (
           <GameCard
             key={game.id}
             game={game}
             result={currentResults[game.id] ?? null}
+            priority={i < 2}
             onResultChange={r => {
               setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))
               setRankingVersion(v => v + 1)
@@ -197,6 +200,18 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
 }
 
 // ── 워들들 배너 ─────────────────────────────────────
+const TILE_GRID = [
+  ['correct','absent', 'present','absent', 'correct'],
+  ['absent', 'correct','absent', 'present','correct'],
+  ['correct','correct','absent', 'correct','absent' ],
+  ['absent', 'present','correct','absent', 'correct'],
+]
+const TILE_COLOR: Record<string, string> = {
+  correct: 'bg-green-500',
+  present: 'bg-yellow-400',
+  absent:  'bg-white/10',
+}
+
 function WordledleBanner() {
   const [played, setPlayed] = useState<boolean | null>(null)
 
@@ -213,33 +228,43 @@ function WordledleBanner() {
   return (
     <Link href="/wordledle" className="block mb-5">
       <div className={cn(
-        'relative overflow-hidden rounded-2xl p-5 flex items-center justify-between transition-all',
-        'hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99]',
-        played
-          ? 'bg-gray-100 border border-gray-200'
-          : 'bg-gray-900 border border-gray-800',
+        'relative rounded-2xl overflow-hidden cursor-pointer bg-gray-950',
+        'border border-gray-800 transition-all duration-200',
+        played && 'grayscale opacity-75',
+        'hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]',
       )}>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Gamepad2 size={16} className={played ? 'text-gray-400' : 'text-green-400'} />
-            <span className={cn('text-xs font-bold', played ? 'text-gray-400' : 'text-green-400')}>
-              오늘의 워들들
-            </span>
-            {played && (
-              <span className="text-xs font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">
-                완료
+        <div className="flex items-center justify-between px-5 py-5">
+          {/* 왼쪽: 제목 */}
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[10px] font-black bg-white/15 text-white/50 px-1.5 py-0.5 rounded tracking-widest">
+                BETA
               </span>
-            )}
+              {played && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-green-400">
+                  <CheckCircle2 size={11} />완료
+                </span>
+              )}
+            </div>
+            <p className="text-3xl font-black text-white tracking-tight leading-none">워들들</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {played ? '오늘 이미 플레이했어요' : '영단어 2개 · 10번의 기회'}
+            </p>
           </div>
-          <p className={cn('text-xl font-black', played ? 'text-gray-500' : 'text-white')}>
-            워들들
-          </p>
-          <p className={cn('text-xs mt-0.5', played ? 'text-gray-400' : 'text-gray-400')}>
-            {played ? '오늘 이미 플레이했어요' : '5글자 영단어 2개 · 10회 도전'}
-          </p>
-        </div>
-        <div className="text-3xl select-none">
-          {played ? '🟩' : '🟨'}
+
+          {/* 오른쪽: 타일 그리드 */}
+          <div className="flex flex-col gap-1 shrink-0">
+            {TILE_GRID.map((row, ri) => (
+              <div key={ri} className="flex gap-1">
+                {row.map((state, ci) => (
+                  <div key={ci} className={cn(
+                    'w-7 h-7 rounded-md',
+                    TILE_COLOR[state],
+                  )} />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </Link>

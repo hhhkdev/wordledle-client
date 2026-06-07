@@ -1,8 +1,13 @@
 import { Game, ParsedResult } from '@/types'
 
 export function getGameImageUrl(slug: string, override?: string | null): string {
+  // override에 이미 쿼리 파라미터가 있으면 그대로 사용 (관리자가 ?v=2 등으로 수동 버스팅 가능)
   if (override) return override
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/game-images/${slug}.jpg`
+  // 자동 생성 URL에는 날짜를 캐시버스터로 추가
+  // — 같은 파일명으로 이미지를 교체했을 때 CDN(Cloudflare) 캐시를 우회
+  // — 날짜 단위로 바뀌므로 과도한 재요청 없이 최신 이미지를 하루 내에 반영
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/game-images/${slug}.jpg?v=${date}`
 }
 
 export const GAMES: Omit<Game, 'id' | 'created_at'>[] = [

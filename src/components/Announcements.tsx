@@ -24,6 +24,17 @@ const TAG_STYLES: Record<AnnouncementTag, string> = {
 // ── 공지사항 목록 (최신 순으로 추가) ────────────────────────────
 const ANNOUNCEMENTS: Announcement[] = [
   {
+    date: '2026-06-07',
+    tag: '업데이트',
+    title: 'v0.1.0 업데이트',
+    content:
+      '워들들 자체 게임\n' +
+      '• 오늘의 5글자 영단어 2개를 10번 안에 맞추는 게임\n' +
+      '• 단어 목록 대폭 확장 — NYT Wordle 유효 단어 전체 추가\n' +
+      '• 첫 접속 시 규칙 설명 팝업 표시\n' +
+      '• 헤더 "?" 버튼으로 규칙 언제든지 재확인 가능',
+  },
+  {
     date: '2026-06-06',
     tag: '업데이트',
     title: 'v0.0.3 업데이트',
