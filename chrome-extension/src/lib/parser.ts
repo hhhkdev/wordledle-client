@@ -8,6 +8,8 @@ export type ParsedResult = {
   metadata: Record<string, unknown>
 }
 
+export type DetectedResult = { slug: string; parsed: ParsedResult }
+
 export const GAME_NAMES: Record<string, string> = {
   'wordle':       'Wordle',
   'kkodle':       '꼬들',
@@ -122,4 +124,13 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
     default:
       return null
   }
+}
+
+// 텍스트에서 게임 자동 감지 — 모든 슬러그 순서대로 시도
+export function detectGame(text: string): DetectedResult | null {
+  for (const slug of Object.keys(GAME_NAMES)) {
+    const parsed = parseGameResult(slug, text)
+    if (parsed) return { slug, parsed }
+  }
+  return null
 }

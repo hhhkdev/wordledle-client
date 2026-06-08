@@ -1,16 +1,11 @@
 {
   "manifest_version": 3,
   "name": "WORDLEDLE 도우미",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "워들류 게임 결과를 WORDLEDLE에 바로 저장하세요",
   "permissions": ["storage", "sidePanel"],
   "host_permissions": [
-    "https://wordledle-client.vercel.app/*",
-    "https://www.nytimes.com/*",
-    "https://kordle.kr/*",
-    "https://koooo.kordle.kr/*",
-    "https://semantle-ko.newsjel.ly/*",
-    "https://solitaired.com/*"
+    "https://wordledle-client.vercel.app/*"
   ],
   "background": {
     "service_worker": "src/background.ts",
@@ -20,17 +15,6 @@
     {
       "matches": ["https://wordledle-client.vercel.app/*"],
       "js": ["src/content-wordledle.ts"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://www.nytimes.com/games/wordle/*",
-        "https://kordle.kr/*",
-        "https://koooo.kordle.kr/*",
-        "https://semantle-ko.newsjel.ly/*",
-        "https://solitaired.com/*"
-      ],
-      "js": ["src/content-game.ts"],
       "run_at": "document_idle"
     }
   ],
