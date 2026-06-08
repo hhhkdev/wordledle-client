@@ -8,6 +8,7 @@ export interface GameInfo {
 }
 
 export const GAMES: GameInfo[] = [
+  { slug: 'wordledle',    name: '워들들',              shortName: '워들들',    url: 'https://wordledle-client.vercel.app/wordledle',   emoji: '🎮', color: '#2563eb' },
   { slug: 'wordle',       name: 'Wordle',             shortName: 'Wordle',    url: 'https://www.nytimes.com/games/wordle/index.html', emoji: '🟩', color: '#3D6B47' },
   { slug: 'kkodle',       name: '꼬들',               shortName: '꼬들',      url: 'https://kordle.kr',                               emoji: '🟧', color: '#B8562A' },
   { slug: 'kkooooodle',   name: '꼬오오오오들',        shortName: '꼬오오들',   url: 'https://koooo.kordle.kr',                         emoji: '🟥', color: '#9B3535' },
