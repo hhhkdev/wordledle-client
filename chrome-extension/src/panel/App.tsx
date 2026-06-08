@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { detectGame, type DetectedResult } from '../lib/parser'
 import { GAMES, GAME_BY_SLUG, type GameInfo } from '../lib/games'
 import { supabase } from '../lib/supabase'
@@ -37,11 +37,11 @@ async function fetchTodayResults(userId: string): Promise<Record<string, GameRes
 
 // ── 루트 ──────────────────────────────────────────────
 export default function App() {
-  const [user, setUser]           = useState<StoredUser | null | undefined>(undefined)
-  const [todayResults, setResults]= useState<Record<string, GameResult>>({})
-  const [rawText, setRawText]     = useState('')
-  const [detection, setDetection] = useState<DetectedResult | null>(null)
-  const [status, setStatus]       = useState<Status>('idle')
+  const [user, setUser]            = useState<StoredUser | null | undefined>(undefined)
+  const [todayResults, setResults] = useState<Record<string, GameResult>>({})
+  const [rawText, setRawText]      = useState('')
+  const [detection, setDetection]  = useState<DetectedResult | null>(null)
+  const [status, setStatus]        = useState<Status>('idle')
 
   useEffect(() => {
     chrome.storage.local.get('wordledle_user', d => setUser(d.wordledle_user ?? null))
@@ -106,12 +106,8 @@ export default function App() {
       <Header nickname={user.nickname} completed={completedCount} total={GAMES.length} />
 
       <main className="flex-1 overflow-y-auto">
-        {/* ① 결과 입력 — 최상단 */}
+        {/* ① 결과 입력 */}
         <section className="p-3 pb-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-0.5">
-            결과 입력
-          </p>
-
           {status === 'saved' ? (
             <SavedScreen
               detection={detection!}
@@ -148,7 +144,7 @@ export default function App() {
         {/* 구분선 */}
         <div className="mx-3 border-t border-gray-100" />
 
-        {/* ② 오늘의 게임 카드 목록 */}
+        {/* ② 오늘의 게임 */}
         <section className="p-3 pt-3">
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-0.5">
             오늘의 게임
@@ -164,12 +160,18 @@ export default function App() {
   )
 }
 
-// ── 컴포넌트 ──────────────────────────────────────────
+// ── 헤더 ─────────────────────────────────────────────
 
 function Header({ nickname, completed, total }: { nickname: string; completed: number; total: number }) {
   return (
     <div className="bg-white border-b border-gray-100 px-4 h-12 flex items-center justify-between shrink-0">
-      <span className="text-sm font-black tracking-tight text-gray-900">WORDLEDLE</span>
+      {/* 로고 — 클릭 시 사이트 메인으로 */}
+      <button
+        onClick={() => chrome.tabs.create({ url: SITE_URL })}
+        className="text-sm font-black tracking-tight text-gray-900 hover:opacity-70 transition-opacity"
+      >
+        WORDLEDLE
+      </button>
       <div className="flex items-center gap-2">
         <span className="text-xs text-gray-400">
           <span className="font-black text-gray-700">{completed}</span>/{total} 완료
@@ -192,8 +194,13 @@ function Spinner() {
 function LoginScreen() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <div className="bg-white border-b border-gray-100 px-4 h-12 flex items-center shrink-0">
-        <span className="text-sm font-black tracking-tight text-gray-900">WORDLEDLE</span>
+      <div className="bg-white border-b border-gray-100 px-4 h-12 flex items-center justify-between shrink-0">
+        <button
+          onClick={() => chrome.tabs.create({ url: SITE_URL })}
+          className="text-sm font-black tracking-tight text-gray-900 hover:opacity-70 transition-opacity"
+        >
+          WORDLEDLE
+        </button>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center">
         <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center text-2xl">🔒</div>
@@ -214,7 +221,53 @@ function LoginScreen() {
   )
 }
 
-// ── 홈 카드 스타일 게임 카드 ──────────────────────────
+// ── 붙여넣기 영역 ─────────────────────────────────────
+
+function PasteArea({ value, onChange, hasDetection, hasText }: {
+  value: string; onChange: (v: string) => void
+  hasDetection: boolean; hasText: boolean
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  const borderColor = hasDetection
+    ? 'border-blue-300 bg-blue-50/40'
+    : hasText
+      ? 'border-red-200 bg-white'
+      : 'border-blue-200 bg-blue-50/60'
+
+  return (
+    <div
+      className={`relative rounded-2xl border-2 transition-colors overflow-hidden cursor-text ${borderColor}`}
+      onClick={() => ref.current?.focus()}
+    >
+      {!value && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none select-none">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-xl">📋</div>
+          <div className="text-center">
+            <p className="text-sm font-bold text-blue-600">결과를 붙여넣으세요</p>
+            <p className="text-[11px] text-blue-400 mt-0.5">클릭 후 Ctrl+V</p>
+          </div>
+        </div>
+      )}
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full h-24 px-3 py-2.5 text-xs font-mono text-gray-600 leading-relaxed resize-none bg-transparent focus:outline-none"
+        placeholder=" "
+        spellCheck={false}
+      />
+      {value && (
+        <button
+          onClick={e => { e.stopPropagation(); onChange('') }}
+          className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 text-gray-500 hover:bg-gray-300 text-[10px] font-bold"
+        >✕</button>
+      )}
+    </div>
+  )
+}
+
+// ── 게임 카드 — 투톤 (이모지 없음) ────────────────────
 
 function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
   const hasResult   = result !== undefined
@@ -223,50 +276,40 @@ function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
   const light       = isLightColor(game.color)
   const textOn      = light ? 'text-gray-900' : 'text-white'
   const subOn       = light ? 'text-gray-600' : 'text-white/70'
-  const scoreStr    = hasResult ? `${(result!.score > 0 ? '+' : '') + result!.score}점` : null
 
   const card = (
     <div className={`rounded-2xl overflow-hidden border border-gray-100 transition-all ${
       game.url ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''
-    } ${hasResult ? 'opacity-90' : ''}`}>
-      {/* 점수 영역 — 이미지 자리 */}
-      <div
-        className="flex items-center justify-center h-[72px] relative"
-        style={{ backgroundColor: hasResult ? game.color : game.color + '22' }}
-      >
+    }`}>
+      {/* 상단: 점수 영역 (이미지 자리) */}
+      <div className="h-[68px] flex items-center justify-center bg-white">
         {hasResult ? (
-          <div className="flex flex-col items-center">
-            <span className={`text-2xl font-black leading-none ${isCompleted ? textOn : 'text-red-300'}`}>
-              {scoreStr}
+          <div className="flex flex-col items-center gap-0.5">
+            <span className={`text-2xl font-black leading-none ${isCompleted ? 'text-gray-900' : 'text-red-500'}`}>
+              {(result!.score > 0 ? '+' : '') + result!.score}점
             </span>
-            <span className={`text-xs mt-1 font-semibold ${isCompleted ? subOn : 'text-red-300/80'}`}>
+            <span className={`text-[11px] font-semibold ${isCompleted ? 'text-gray-400' : 'text-red-400'}`}>
               {isCompleted ? '클리어' : '실패'}
             </span>
           </div>
         ) : (
-          <span className="text-3xl opacity-40">{game.emoji}</span>
+          <span className="text-sm font-semibold text-gray-300">미완료</span>
         )}
       </div>
 
-      {/* 게임명 바 — 홈 카드의 컬러 바 */}
+      {/* 하단: 게임명 바 (게임 컬러) */}
       <div
         className="flex items-center justify-between px-3 py-2"
-        style={{ backgroundColor: hasResult ? game.color : game.color + '22' }}
+        style={{ backgroundColor: hasResult ? game.color : game.color + 'cc' }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-base shrink-0">{game.emoji}</span>
-          <p className={`text-sm font-black truncate ${hasResult ? textOn : 'text-gray-600'}`}>
-            {game.shortName}
-          </p>
-        </div>
-        {game.url ? (
-          <span className={`text-xs font-semibold shrink-0 ${hasResult ? subOn : 'text-gray-400'}`}>
-            {hasResult ? '재도전 →' : '바로가기 →'}
+        <p className={`text-sm font-black truncate ${textOn}`}>{game.name}</p>
+        {game.url && (
+          <span className={`text-xs font-semibold shrink-0 ml-2 ${subOn}`}>
+            {isFailed ? '재도전 →' : hasResult ? '재도전 →' : '→'}
           </span>
-        ) : (
-          <span className={`text-[10px] shrink-0 ${hasResult ? subOn : 'text-gray-300'}`}>
-            입력 전용
-          </span>
+        )}
+        {!game.url && (
+          <span className={`text-[10px] shrink-0 ml-2 ${subOn}`}>입력 전용</span>
         )}
       </div>
     </div>
@@ -278,48 +321,16 @@ function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
   return card
 }
 
-// ── 붙여넣기 + 감지 결과 ─────────────────────────────
-
-function PasteArea({ value, onChange, hasDetection, hasText }: {
-  value: string; onChange: (v: string) => void
-  hasDetection: boolean; hasText: boolean
-}) {
-  return (
-    <div className={`relative bg-white rounded-2xl border-2 transition-colors overflow-hidden ${
-      hasDetection ? 'border-blue-200' : hasText ? 'border-red-100' : 'border-dashed border-gray-200'
-    }`}>
-      {!value && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 pointer-events-none select-none">
-          <span className="text-2xl">📋</span>
-          <p className="text-xs font-semibold text-gray-400">결과를 붙여넣으세요</p>
-          <p className="text-[10px] text-gray-300">게임에서 복사 후 Ctrl+V</p>
-        </div>
-      )}
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full h-24 px-3 py-2.5 text-xs font-mono text-gray-600 leading-relaxed resize-none bg-transparent focus:outline-none"
-        placeholder=" "
-        spellCheck={false}
-      />
-      {value && (
-        <button
-          onClick={() => onChange('')}
-          className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200 text-[10px] font-bold"
-        >✕</button>
-      )}
-    </div>
-  )
-}
+// ── 감지 결과 + 완료 화면 ────────────────────────────
 
 function DetectedResultCard({ detection }: { detection: DetectedResult }) {
   const { slug, parsed } = detection
-  const game    = GAME_BY_SLUG[slug]
-  const isOk    = parsed.completed
+  const game = GAME_BY_SLUG[slug]
+  const isOk = parsed.completed
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="h-1 w-full" style={{ background: isOk ? (game?.color ?? '#6b7280') : '#f87171' }} />
+      <div className="h-1" style={{ background: isOk ? (game?.color ?? '#6b7280') : '#f87171' }} />
       <div className="px-4 py-3 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
@@ -363,10 +374,7 @@ function SavedScreen({ detection, onReset }: { detection: DetectedResult; onRese
         </p>
         <p className="text-xs text-gray-500 mt-1">저장됐어요!</p>
       </div>
-      <button
-        onClick={onReset}
-        className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold"
-      >
+      <button onClick={onReset} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold">
         다른 결과 저장하기
       </button>
     </div>
