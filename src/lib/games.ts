@@ -215,9 +215,9 @@ export function parseGameResult(
 
       const bonus = isFormatB ? 5 : 0
       return {
-        score: scoreCleared(attempts, 6, 10) + bonus,
+        score: scoreCleared(attempts, 5, 10) + bonus,
         attempts,
-        max_attempts: 6,
+        max_attempts: 5,
         completed,
         metadata: {
           puzzle_number: null,
