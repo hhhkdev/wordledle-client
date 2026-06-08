@@ -119,20 +119,25 @@ function Keyboard({ keyStates, onKey }: {
   onKey: (k: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-1.5 items-center select-none">
+    <div className="flex flex-col gap-0.75 w-full select-none">
       {KEY_ROWS.map((row, ri) => (
-        <div key={ri} className="flex gap-1">
-          {row.map(key => (
-            <button key={key}
-              onPointerDown={e => { e.preventDefault(); onKey(key) }}
-              className={cn(
-                'h-14 rounded-lg font-bold text-sm flex items-center justify-center',
-                'transition-colors active:opacity-70',
-                key === 'ENTER' || key === '⌫' ? 'px-3 min-w-13' : 'w-10',
-                KEY_COLORS[keyStates[key] ?? 'unused'],
-              )}
-            >{key}</button>
-          ))}
+        <div key={ri} className="flex gap-0.75 w-full">
+          {row.map(key => {
+            const isAction = key === 'ENTER' || key === '⌫'
+            return (
+              <button key={key}
+                onPointerDown={e => { e.preventDefault(); onKey(key) }}
+                className={cn(
+                  'h-14 rounded-lg flex items-center justify-center',
+                  'transition-colors active:opacity-60',
+                  isAction
+                    ? 'flex-[1.5] text-[11px] font-black tracking-tight bg-gray-300 text-gray-800'
+                    : 'flex-1 font-bold text-sm',
+                  !isAction && KEY_COLORS[keyStates[key] ?? 'unused'],
+                )}
+              >{key}</button>
+            )
+          })}
         </div>
       ))}
     </div>
@@ -543,7 +548,7 @@ export default function WordledlePage() {
       {/* 키보드 — 하단 고정 (게임 중일 때만) */}
       {!alreadyPlayedRemotely && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-t border-gray-100 pt-2 pb-6">
-          <div className="max-w-lg mx-auto px-4">
+          <div className="max-w-lg mx-auto px-2 sm:px-4">
             <Keyboard keyStates={keyStates} onKey={handleKey} />
           </div>
         </div>
