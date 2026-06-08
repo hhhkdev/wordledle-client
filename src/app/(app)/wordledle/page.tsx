@@ -305,6 +305,8 @@ export default function WordledlePage() {
     if (typeof window === 'undefined') return false
     return !localStorage.getItem(RULES_SEEN_KEY)
   })
+  // 다른 기기/세션에서 이미 플레이한 경우 서버 결과 (로컬 상태 없을 때만)
+  const [serverResult, setServerResult] = useState<{ score: number; completed: boolean } | null>(null)
 
   const activeGuesses = currentWord === 0 ? word1Guesses : word2Guesses
   const activeWord = words[currentWord]
@@ -315,6 +317,29 @@ export default function WordledlePage() {
   useEffect(() => {
     persistState({ word1Guesses, word2Guesses, currentWord, gameOver, won })
   }, [word1Guesses, word2Guesses, currentWord, gameOver, won])
+
+  // 로그인 상태이고 로컬 기록이 없을 때 서버에서 오늘 결과 확인 (계정 기반 중복 방지)
+  useEffect(() => {
+    if (!user) return
+    const s = loadSaved()
+    if (s?.gameOver) return // 이미 로컬에 오늘 게임 완료 기록 있음
+    const check = async () => {
+      const supabase = createClient()
+      const { data: gameRow } = await supabase.from('games').select('id').eq('slug', 'wordledle').single()
+      if (!gameRow) return
+      const { data } = await supabase.from('results')
+        .select('score, completed')
+        .eq('user_id', user.id)
+        .eq('game_id', gameRow.id)
+        .eq('date', kstToday())
+        .single()
+      if (data) {
+        setServerResult({ score: data.score, completed: data.completed })
+        setGameOver(true)
+      }
+    }
+    check()
+  }, [user])
 
   // Supabase에 결과 저장 (로그인 상태일 때만)
   async function saveResult(w1: string[], w2: string[], didWin: boolean) {
@@ -426,14 +451,17 @@ export default function WordledlePage() {
 
   const boardRows = currentWord === 0 ? MAX_GUESSES : MAX_GUESSES - word1Guesses.length
 
+  // 다른 세션에서 이미 플레이 (로컬 기록 없음)
+  const alreadyPlayedRemotely = serverResult !== null && word1Guesses.length === 0 && word2Guesses.length === 0
+
   return (
-    <div className="max-w-lg mx-auto flex flex-col items-center gap-4 pb-8">
+    <div className="max-w-lg mx-auto flex flex-col items-center gap-4 pb-56">
       {/* 헤더 */}
       <div className="w-full flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">워들들</h1>
           <p className="text-xs text-gray-400 mt-0.5">
-            {currentWord === 0 ? '단어 1/2' : '단어 2/2'}
+            {alreadyPlayedRemotely ? '오늘 완료' : currentWord === 0 ? '단어 1/2' : '단어 2/2'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -441,18 +469,20 @@ export default function WordledlePage() {
             className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
             <HelpCircle size={20} />
           </button>
-          {user?.is_admin && gameOver && (
+          {user?.is_admin && gameOver && !alreadyPlayedRemotely && (
             <button onClick={handleAdminReset}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 text-red-500 text-xs font-bold border border-red-200">
               <RotateCcw size={12} />리셋
             </button>
           )}
-          <div className={cn(
-            'px-3 py-1.5 rounded-xl text-sm font-black tabular-nums',
-            gameOver ? 'bg-gray-100 text-gray-400' : remaining <= 3 ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-700',
-          )}>
-            남은 {remaining}회
-          </div>
+          {!alreadyPlayedRemotely && (
+            <div className={cn(
+              'px-3 py-1.5 rounded-xl text-sm font-black tabular-nums',
+              gameOver ? 'bg-gray-100 text-gray-400' : remaining <= 3 ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-700',
+            )}>
+              남은 {remaining}회
+            </div>
+          )}
         </div>
       </div>
 
@@ -463,32 +493,60 @@ export default function WordledlePage() {
         message ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2',
       )}>{message}</div>
 
-      {/* Word 1 완료 배너 */}
-      {currentWord === 1 && (
-        <div className="w-full flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <span className="text-green-500 font-black text-sm">✓ 단어 1 완료</span>
-            <span className="text-xs text-green-600">{word1Guesses.length}번</span>
+      {alreadyPlayedRemotely ? (
+        /* ── 다른 기기에서 이미 플레이한 경우 ── */
+        <div className="w-full flex flex-col items-center gap-5 py-12 text-center">
+          <p className="text-5xl">✅</p>
+          <div>
+            <p className="text-xl font-black text-gray-900">오늘은 이미 플레이했어요</p>
+            <p className="text-sm text-gray-500 mt-1">내일 새로운 단어로 다시 도전해요!</p>
           </div>
-          <span className="text-sm font-black uppercase tracking-widest text-green-700">{words[0]}</span>
+          <div className={cn(
+            'inline-flex items-center gap-1.5 rounded-xl px-5 py-2 border',
+            serverResult.completed ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200',
+          )}>
+            <span className={cn('text-lg font-black', serverResult.completed ? 'text-yellow-600' : 'text-red-400')}>
+              {serverResult.score > 0 ? '+' : ''}{serverResult.score}점
+            </span>
+          </div>
         </div>
+      ) : (
+        /* ── 일반 게임 화면 ── */
+        <>
+          {/* Word 1 완료 배너 */}
+          {currentWord === 1 && (
+            <div className="w-full flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-green-500 font-black text-sm">✓ 단어 1 완료</span>
+                <span className="text-xs text-green-600">{word1Guesses.length}번</span>
+              </div>
+              <span className="text-sm font-black uppercase tracking-widest text-green-700">{words[0]}</span>
+            </div>
+          )}
+
+          {/* 보드 */}
+          <div className={cn('transition-all', shake && 'animate-shake')}>
+            <Board word={activeWord} guesses={activeGuesses}
+              currentGuess={currentGuess} totalRows={boardRows} />
+          </div>
+
+          {/* 결과 다시 보기 */}
+          {gameOver && !showResult && (
+            <button onClick={() => setShowResult(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold">
+              <Trophy size={14} />결과 보기
+            </button>
+          )}
+        </>
       )}
 
-      {/* 보드 */}
-      <div className={cn('transition-all', shake && 'animate-shake')}>
-        <Board word={activeWord} guesses={activeGuesses}
-          currentGuess={currentGuess} totalRows={boardRows} />
-      </div>
-
-      {/* 키보드 */}
-      <Keyboard keyStates={keyStates} onKey={handleKey} />
-
-      {/* 결과 다시 보기 */}
-      {gameOver && !showResult && (
-        <button onClick={() => setShowResult(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold">
-          <Trophy size={14} />결과 보기
-        </button>
+      {/* 키보드 — 하단 고정 (게임 중일 때만) */}
+      {!alreadyPlayedRemotely && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-sm border-t border-gray-100 pt-2 pb-6">
+          <div className="max-w-lg mx-auto px-4">
+            <Keyboard keyStates={keyStates} onKey={handleKey} />
+          </div>
+        </div>
       )}
 
       {showResult && (
