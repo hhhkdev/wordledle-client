@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -18,13 +19,16 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const handleLogout = () => {
+  function handleLogout() {
     logout()
     router.push('/')
+    setConfirmOpen(false)
   }
 
   return (
+    <>
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/60">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-2">
         <Link href="/" className="hover:opacity-75 transition-opacity shrink-0">
@@ -77,7 +81,7 @@ export default function Navbar() {
                 <span className="hidden sm:inline">{user.nickname}</span>
               </Link>
               <button
-                onClick={handleLogout}
+                onClick={() => setConfirmOpen(true)}
                 className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="로그아웃"
               >
@@ -97,5 +101,36 @@ export default function Navbar() {
         </nav>
       </div>
     </header>
+
+    {/* 로그아웃 확인 모달 */}
+    {confirmOpen && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        onClick={() => setConfirmOpen(false)}
+      >
+        <div
+          className="bg-white rounded-2xl w-full max-w-xs p-6 shadow-xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <p className="text-base font-black text-gray-900 mb-1">로그아웃할까요?</p>
+          <p className="text-sm text-gray-500 mb-6">다시 로그인하면 기록을 이어서 볼 수 있어요.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold"
+            >
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }

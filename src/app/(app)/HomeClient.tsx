@@ -33,6 +33,11 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
   const [todayRanking, setTodayRanking] = useState<RankingEntry[]>([])
   const [rankingVersion, setRankingVersion] = useState(0)
 
+  // 로그아웃 시 결과 즉시 초기화
+  useEffect(() => {
+    if (!user) setCurrentResults({})
+  }, [user])
+
   // 현재 회차 결과 (lamp 지시등용) — 게임별 초기화 시각 기준
   useEffect(() => {
     if (!user || games.length === 0) return
