@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -20,6 +20,21 @@ export default function Navbar() {
   const router = useRouter()
   const { user, logout } = useAuth()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [hasExt, setHasExt] = useState(false)
+
+  // 크롬 익스텐션 설치 여부 감지 (content script가 data-wordledle-ext 마커를 삽입)
+  useEffect(() => {
+    const check = () =>
+      setHasExt(document.documentElement.hasAttribute('data-wordledle-ext'))
+    check()
+    const obs = new MutationObserver(check)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-wordledle-ext'] })
+    return () => obs.disconnect()
+  }, [])
+
+  function handleOpenPanel() {
+    document.dispatchEvent(new CustomEvent('wordledle-ext-open'))
+  }
 
   function handleLogout() {
     logout()
@@ -51,6 +66,16 @@ export default function Navbar() {
               <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
+
+          {hasExt && (
+            <button
+              onClick={handleOpenPanel}
+              title="익스텐션 패널 열기"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+            >
+              📋
+            </button>
+          )}
 
           {user ? (
             <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-gray-200">
