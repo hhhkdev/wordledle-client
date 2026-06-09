@@ -27,7 +27,7 @@ const ANNOUNCEMENTS: Announcement[] = [
   {
     date: '2026-06-09',
     tag: '업데이트',
-    title: 'v0.2.1 업데이트',
+    title: 'v0.2.2 업데이트',
     content:
       '프로필 페이지 강화\n' +
       '• 활동 캘린더 — 최근 91일 잔디 히트맵으로 활동 기록 시각화\n' +
