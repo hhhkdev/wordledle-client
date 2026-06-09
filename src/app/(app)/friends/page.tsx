@@ -115,6 +115,10 @@ export default function FriendsPage() {
   const [addError, setAddError] = useState('')
   const [addLoading, setAddLoading] = useState(false)
   const [loadingFriends, setLoadingFriends] = useState(true)
+  const [searchResults, setSearchResults] = useState<User[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchDone, setSearchDone] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
@@ -164,6 +168,76 @@ export default function FriendsPage() {
     }
     loadFriends()
   }, [user])
+
+  // 닉네임 입력 시 실시간 검색 (300ms debounce)
+  useEffect(() => {
+    const q = nickname.trim()
+    if (!q) { setSearchResults([]); setSearchDone(false); return }
+
+    setSearchLoading(true)
+    const timer = setTimeout(async () => {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('users')
+        .select('id, nickname, created_at')
+        .ilike('nickname', `%${q}%`)
+        .neq('id', user!.id)
+        .limit(6)
+
+      const filtered = (data ?? []).filter(
+        (u: { id: string }) => !friends.some(f => f.friend_id === u.id)
+      )
+      setSearchResults(filtered as User[])
+      setSearchLoading(false)
+      setSearchDone(true)
+    }, 300)
+
+    return () => { clearTimeout(timer); setSearchLoading(false) }
+  }, [nickname, user, friends])
+
+  // 검색 결과 외부 클릭 시 닫기
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchResults([]); setSearchDone(false)
+      }
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  async function handleAddDirect(target: User) {
+    if (!user) return
+    setAddLoading(true)
+    setAddError('')
+    setSearchResults([]); setSearchDone(false)
+
+    const supabase = createClient()
+    const { error } = await supabase.from('friends').insert({ user_id: user.id, friend_id: target.id })
+    if (error) { setAddError('친구 추가에 실패했습니다.'); setAddLoading(false); return }
+
+    setFriends(prev => [{
+      id: crypto.randomUUID(),
+      user_id: user.id,
+      friend_id: target.id,
+      created_at: new Date().toISOString(),
+      friend: target,
+    }, ...prev])
+
+    const today = kstToday()
+    const { data: resultsData } = await supabase
+      .from('results').select('user_id, score, completed, date')
+      .eq('user_id', target.id).order('date', { ascending: false })
+    const stat: FriendStats = { totalScore: 0, todayCompleted: 0, todayTotal: 0, lastSubmitted: null }
+    for (const r of resultsData ?? []) {
+      stat.totalScore += r.score ?? 0
+      if (!stat.lastSubmitted) stat.lastSubmitted = r.date
+      if (r.date === today) { stat.todayTotal++; if (r.completed) stat.todayCompleted++ }
+    }
+    setFriendStats(prev => ({ ...prev, [target.id]: stat }))
+    setNickname('')
+    setAddLoading(false)
+  }
 
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
@@ -257,17 +331,44 @@ export default function FriendsPage() {
           <UserPlus size={15} />
           친구 추가
         </h2>
-        <form onSubmit={handleAdd} className="flex gap-2">
-          <div className="flex-1">
-            <Input
-              placeholder="친구의 닉네임을 입력하세요"
-              value={nickname}
-              onChange={e => { setNickname(e.target.value); setAddError('') }}
-              error={addError}
-            />
-          </div>
-          <Button type="submit" loading={addLoading} className="shrink-0 self-start">추가</Button>
-        </form>
+        <div ref={searchRef} className="relative">
+          <form onSubmit={handleAdd} className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="닉네임으로 검색"
+                value={nickname}
+                onChange={e => { setNickname(e.target.value); setAddError('') }}
+                error={addError}
+              />
+            </div>
+            <Button type="submit" loading={addLoading} className="shrink-0 self-start">추가</Button>
+          </form>
+
+          {/* 검색 결과 드롭다운 */}
+          {nickname.trim() && (searchResults.length > 0 || (searchDone && !searchLoading)) && (
+            <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl border border-gray-100 shadow-xl z-30 overflow-hidden">
+              {searchResults.length > 0 ? (
+                searchResults.map(result => (
+                  <button
+                    key={result.id}
+                    type="button"
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => handleAddDirect(result)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <span className="text-sm font-bold text-gray-900">{result.nickname}</span>
+                    <span className="text-xs font-bold text-blue-500 flex items-center gap-1">
+                      <UserPlus size={12} />
+                      추가
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="px-4 py-3 text-sm text-gray-400 text-center">검색 결과가 없어요</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 친구 목록 */}
