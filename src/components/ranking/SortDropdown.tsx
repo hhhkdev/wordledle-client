@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowUpDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type SortKey = 'completed' | 'score'
+export type SortKey = 'completed' | 'score' | 'tier'
 
 const OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'tier',      label: '티어순' },
+  { key: 'score',     label: '점수순' },
   { key: 'completed', label: '완료순' },
-  { key: 'score', label: '점수순' },
 ]
 
 interface SortDropdownProps {

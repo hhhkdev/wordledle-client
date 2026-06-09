@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { Trophy, Users, LogOut, LogIn, UserCircle, ShieldCheck, Gamepad2 } from 'lucide-react'
+import { Trophy, Users, LogOut, LogIn, UserCircle, ShieldCheck, Puzzle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Logo from './Logo'
 
 const NAV_ITEMS = [
-  { href: '/wordledle', label: '워들들', icon: Gamepad2 },
   { href: '/ranking', label: '랭킹', icon: Trophy },
   { href: '/friends', label: '친구', icon: Users },
 ]
@@ -67,14 +66,24 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {hasExt && (
+          {hasExt ? (
             <button
               onClick={handleOpenPanel}
-              title="익스텐션 패널 열기"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+              title="사이드바 열기"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
             >
-              📋
+              <Puzzle size={16} />
+              <span className="hidden sm:inline">익스텐션</span>
             </button>
+          ) : (
+            <Link
+              href="/extension"
+              title="익스텐션 설치"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+            >
+              <Puzzle size={16} />
+              <span className="hidden sm:inline">익스텐션</span>
+            </Link>
           )}
 
           {user ? (

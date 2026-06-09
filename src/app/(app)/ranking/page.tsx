@@ -19,6 +19,8 @@ interface RankingEntry {
   totalScore: number
   completedCount: number
   primaryStat: number | null
+  avgDailyScore: number   // 날짜별 합산 → 평균 (티어 기준)
+  activeDays: number      // 기록이 있는 날 수
 }
 
 function kstToday(): string {
@@ -66,12 +68,29 @@ function buildEntries(resultsData: (GameResult & { user: User })[]) {
   for (const r of resultsData) {
     const u = r.user
     if (!u) continue
-    if (!map.has(u.id)) map.set(u.id, { user: u, results: [], totalScore: 0, completedCount: 0, primaryStat: null })
+    if (!map.has(u.id)) map.set(u.id, {
+      user: u, results: [], totalScore: 0, completedCount: 0,
+      primaryStat: null, avgDailyScore: 0, activeDays: 0,
+    })
     const entry = map.get(u.id)!
     entry.results.push(r)
     entry.totalScore += r.score ?? 0
     if (r.completed) entry.completedCount++
   }
+
+  // 날짜별 합산 후 평균 계산
+  for (const entry of map.values()) {
+    const byDate: Record<string, number> = {}
+    for (const r of entry.results) {
+      byDate[r.date] = (byDate[r.date] ?? 0) + (r.score ?? 0)
+    }
+    const daily = Object.values(byDate)
+    entry.activeDays = daily.length
+    entry.avgDailyScore = daily.length > 0
+      ? Math.round(daily.reduce((a, b) => a + b, 0) / daily.length * 10) / 10
+      : 0
+  }
+
   return map
 }
 
@@ -82,6 +101,7 @@ function sortEntries(entries: RankingEntry[], selectedGameSlug: string | null, s
       b.results.reduce((s, r) => s + (r.attempts ?? 0), 0)
     )
   }
+  if (sortKey === 'tier')  return [...entries].sort((a, b) => b.avgDailyScore - a.avgDailyScore || b.totalScore - a.totalScore)
   if (sortKey === 'score') return [...entries].sort((a, b) => b.totalScore - a.totalScore || b.completedCount - a.completedCount)
   return [...entries].sort((a, b) =>
     b.completedCount !== a.completedCount ? b.completedCount - a.completedCount : b.totalScore - a.totalScore
@@ -101,7 +121,7 @@ export default function RankingPage() {
   const [games, setGames] = useState<Game[]>([])
   const [filter, setFilter] = useState<FilterState>(makeDefaultFilter)        // 시트 draft
   const [appliedFilter, setAppliedFilter] = useState<FilterState>(makeDefaultFilter) // 실제 쿼리용
-  const [sortKey, setSortKey] = useState<SortKey>('score')
+  const [sortKey, setSortKey] = useState<SortKey>('tier')
   const [globalEntries, setGlobalEntries] = useState<RankingEntry[]>([])
   const [friendEntries, setFriendEntries] = useState<RankingEntry[]>([])
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
@@ -252,6 +272,7 @@ export default function RankingPage() {
           isKkomanttle={isKkomanttle}
           showDots={appliedFilter.selectedGame === 'all' && !isKkomanttle}
           friendIds={friendIds}
+          sortKey={sortKey}
           onFriendChange={(userId, added) =>
             setFriendIds(prev => {
               const next = new Set(prev)

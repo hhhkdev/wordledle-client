@@ -880,8 +880,102 @@ const NYT_VALID: string[] = [
   'zowie','zulus','zupan','zupas','zuppa','zurfs','zuzim','zygal','zygon','zymic',
 ]
 
+// 일반 영단어 추가 — 자주 입력하지만 위 목록에 없는 단어들
+const EXTRA2: string[] = [
+  // 일상 명사
+  'about','above','abuse','adult','after','again','agree','ahead','aisle','alarm',
+  'album','alert','alike','alive','alley','alone','along','aloud','aloft','alter',
+  'among','angel','anime','annoy','aorta','apple','apply','arena','argue','asked',
+  'attic','audio','awful','axles',
+  // B
+  'badly','baked','baker','bakes','balls','bands','bangs','banks','barks','based',
+  'basis','batch','baths','baton','beats','began','begin','being','bikes','bills',
+  'birds','bites','blown','blues','blunt','boats','bones','books','boots','bossy',
+  'bowed','boxes','boys','brats','brave','bread','broke','broom','burns',
+  // C
+  'caged','calls','calmly','canal','cards','cares','cells','chain','chose','cited',
+  'claim','clams','claps','claws','clays','clear','clerk','cloth','clown','clubs',
+  'coals','coast','colds','coils','comes','comic','cooks','coops','cores','costs',
+  'couch','could','crows','curly',
+  // D
+  'daily','dairy','dares','deals','decay','decks','decor','deeds','dense','depot',
+  'devil','dicey','dirty','disco','dodge','doing','dolls','donkey','doors','draws',
+  'dried','dries','drool','drops','drums','ducks','ducky','dumps','dusty',
+  // E
+  'eager','early','eased','eaten','eight','elbow','elite','empty','ended','enjoy',
+  'enter','equal','error','essay','event','every','exact','exalt','exams','exist',
+  'extra',
+  // F
+  'facts','fails','faked','falls','false','fangs','farms','favor','feels','ferry',
+  'fiery','fills','films','finds','fired','fires','fixed','fixes','flags','flame',
+  'flank','flash','flung','flute','focal','foggy','folks','foods','fools','foray',
+  'forms','forum','frees','fresh','fully','funny',
+  // G
+  'gains','games','gangs','gates','gauge','genes','girl','gives','glare','gleam',
+  'gloomy','goals','going','gonna','goods','goons','grabs','grains','greens','grins',
+  'grips','groan','growl','grown','gruel','gruff','gulls','gummy','gummy',
+  // H
+  'habit','hails','halls','hands','hangs','happy','harms','haunt','heads','heady',
+  'heals','heavy','heels','hello','helps','herbs','hikes','hills','hints','holds',
+  'holly','honey','honor','hopes','horns','house','hovel','human','humid','hunts',
+  // I
+  'ideal','idols','image','inbox','inner','input','iotas','issue','items',
+  // J
+  'jails','jelly','jerky','joins','joins','jokes','jolly','jokey',
+  // K
+  'kayak','keeps','kicks','kills','kinds','kings','kitty','kneel','knelt',
+  // L
+  'lacks','lakes','lamps','lands','lapel','leaky','leads','leafy','leapt','legal',
+  'level','light','likes','limbs','links','lists','lived','lives','local','looks',
+  'loose','lowly','lusts',
+  // M
+  'makes','males','malls','marks','match','meals','means','meets','mends','merry',
+  'minds','mine','mixed','mixes','moist','money','monks','mood','moves','muddy',
+  // N
+  'names','nerds','nests','newly','nicer','night','nifty','nixed','noble','norms',
+  'noted','novel','nurse',
+  // O
+  'often','older','onset','opens','optic','outer','oven','owned',
+  // P
+  'packs','pages','pains','pairs','panel','parks','parts','paths','pawns','penny',
+  'perks','phase','picks','piney','pipes','place','plans','plots','plows','pokey',
+  'polls','pools','posts','pouty','power','prior','probe','prone','prose','proud',
+  'proves','prowl','pulls','pumps','purse','pushy',
+  // R
+  'races','racks','rails','rains','raked','ranks','rated','rates','realm','reeds',
+  'reeks','reels','relay','rents','rides','right','rings','roads','roofs','rooms',
+  'roots','ropes','roost','ruler','rules','rural','rusty',
+  // S
+  'sadly','safes','sages','sandy','saves','scars','seeks','seems','sells','sends',
+  'sense','shade','shaky','shall','shame','share','shows','shrug','sided','sides',
+  'siege','signs','silky','silly','since','skies','skill','skins','slick','slops',
+  'smack','small','smart','smash','smell','smile','smoke','sneak','sniff','snore',
+  'soapy','socks','solar','solid','solve','songs','sorts','spare','spark','speed',
+  'spend','spill','spine','split','spook','spoon','spore','spoke','spray','squat',
+  'stack','stage','stain','stale','stand','stark','start','steal','steep','steps',
+  'stern','still','stone','store','story','strap','straw','stray','strip','stuck',
+  'study','style','sugar','suits','super','surly','swamp','swear','sweep','sweet',
+  'swept','swift','swords',
+  // T
+  'taken','talks','tasks','taste','taxes','teach','tells','texts','their','thick',
+  'thing','think','those','threw','thumb','tired','title','today','token','topaz',
+  'total','toxic','track','trade','trail','train','trait','trash','treat','trend',
+  'trial','trick','tried','truck','truly','trunk','truth','tummy','turns','twice',
+  'twist',
+  // U
+  'under','union','unite','upper','upset','using','usual','utter',
+  // V
+  'valor','value','veins','venom','verge','verse','visit','vocal','voice','voter',
+  // W
+  'walks','walls','wants','warns','waste','watch','waves','weeds','weird','wells',
+  'whole','wider','winds','wines','wings','witch','woman','women','world','worry',
+  'worse','worst','worth','would','wrath','wreck','write','wrong','wrote',
+  // X Y Z
+  'yards','years','young','yours','youth','zones',
+]
+
 // 정답 단어 + 추가 허용 단어를 합쳐 유효 추측 집합 구성
-export const VALID_WORDS = new Set([...ANSWERS, ...EXTRA_GUESSES, ...NYT_VALID])
+export const VALID_WORDS = new Set([...ANSWERS, ...EXTRA_GUESSES, ...NYT_VALID, ...EXTRA2])
 
 const EPOCH = new Date(2026, 5, 1).getTime() // 2026-06-01 기준일
 const SHUFFLE_SEED = 20260601 // 고정 시드로 항상 동일한 순서 보장

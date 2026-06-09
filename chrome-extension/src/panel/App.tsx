@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { detectGame, type DetectedResult } from '../lib/parser'
-import { GAMES, GAME_BY_SLUG, type GameInfo } from '../lib/games'
+import { detectGame, type DetectedResult, type ParsedResult } from '../lib/parser'
+import { GAMES, type GameInfo } from '../lib/games'
 import { supabase } from '../lib/supabase'
 
 // ── 타입 ──────────────────────────────────────────────
@@ -18,6 +18,24 @@ function isLightColor(hex: string) {
 }
 
 // ── Supabase ──────────────────────────────────────────
+async function fetchGames(): Promise<GameInfo[]> {
+  const { data } = await supabase
+    .from('games')
+    .select('slug, name, url, color')
+    .order('name')
+  if (!data || data.length === 0) return GAMES
+  // GAMES 순서를 기준으로 정렬 (DB에 없는 항목은 뒤로)
+  const slugOrder = GAMES.map(g => g.slug)
+  return (data as GameInfo[]).sort((a, b) => {
+    const ai = slugOrder.indexOf(a.slug)
+    const bi = slugOrder.indexOf(b.slug)
+    if (ai === -1 && bi === -1) return 0
+    if (ai === -1) return 1
+    if (bi === -1) return -1
+    return ai - bi
+  })
+}
+
 async function fetchTodayResults(userId: string): Promise<Record<string, GameResult>> {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
   const { data } = await supabase
@@ -28,7 +46,7 @@ async function fetchTodayResults(userId: string): Promise<Record<string, GameRes
 
   if (!data) return {}
   const map: Record<string, GameResult> = {}
-  for (const row of data as { score: number; completed: boolean; games: { slug: string } | null }[]) {
+  for (const row of data as unknown as { score: number; completed: boolean; games: { slug: string } | null }[]) {
     const slug = row.games?.slug
     if (slug) map[slug] = { score: row.score, completed: row.completed }
   }
@@ -38,10 +56,15 @@ async function fetchTodayResults(userId: string): Promise<Record<string, GameRes
 // ── 루트 ──────────────────────────────────────────────
 export default function App() {
   const [user, setUser]            = useState<StoredUser | null | undefined>(undefined)
+  const [games, setGames]          = useState<GameInfo[]>(GAMES)
   const [todayResults, setResults] = useState<Record<string, GameResult>>({})
   const [rawText, setRawText]      = useState('')
   const [detection, setDetection]  = useState<DetectedResult | null>(null)
   const [status, setStatus]        = useState<Status>('idle')
+
+  useEffect(() => {
+    fetchGames().then(setGames)
+  }, [])
 
   useEffect(() => {
     chrome.storage.local.get('wordledle_user', d => setUser(d.wordledle_user ?? null))
@@ -99,11 +122,26 @@ export default function App() {
   if (user === undefined) return <Spinner />
   if (!user)              return <LoginScreen />
 
-  const completedCount = GAMES.filter(g => todayResults[g.slug]?.completed).length
+  // 완료 → 감지된 게임 → 나머지 순서로 정렬
+  const sortedGames = [...games].sort((a, b) => {
+    const aComp = todayResults[a.slug]?.completed === true
+    const bComp = todayResults[b.slug]?.completed === true
+    if (aComp && !bComp) return -1
+    if (!aComp && bComp) return 1
+    if (!aComp && !bComp) {
+      const aDet = detection?.slug === a.slug
+      const bDet = detection?.slug === b.slug
+      if (aDet && !bDet) return -1
+      if (!aDet && bDet) return 1
+    }
+    return 0
+  })
+
+  const completedCount = games.filter(g => todayResults[g.slug]?.completed).length
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
-      <Header nickname={user.nickname} completed={completedCount} total={GAMES.length} />
+      <Header nickname={user.nickname} completed={completedCount} total={games.length} />
 
       <main className="flex-1 overflow-y-auto">
         {/* ① 결과 입력 */}
@@ -111,6 +149,7 @@ export default function App() {
           {status === 'saved' ? (
             <SavedScreen
               detection={detection!}
+              games={games}
               onReset={() => { setRawText(''); setStatus('idle') }}
             />
           ) : (
@@ -120,11 +159,11 @@ export default function App() {
                 onChange={setRawText}
                 hasDetection={!!detection}
                 hasText={rawText.trim().length > 0}
+                onSubmit={detection ? handleSave : undefined}
               />
               {rawText.trim() && !detection && (
                 <p className="text-xs text-center text-gray-400">인식되지 않는 형식이에요</p>
               )}
-              {detection && <DetectedResultCard detection={detection} />}
               {detection && (
                 <button
                   onClick={handleSave}
@@ -150,8 +189,17 @@ export default function App() {
             오늘의 게임
           </p>
           <div className="flex flex-col gap-2">
-            {GAMES.map(game => (
-              <GameCard key={game.slug} game={game} result={todayResults[game.slug]} />
+            {sortedGames.map(game => (
+              <GameCard
+                key={game.slug}
+                game={game}
+                result={todayResults[game.slug]}
+                detectedParsed={
+                  status !== 'saved' && detection?.slug === game.slug
+                    ? detection.parsed
+                    : undefined
+                }
+              />
             ))}
           </div>
         </section>
@@ -165,7 +213,6 @@ export default function App() {
 function Header({ nickname, completed, total }: { nickname: string; completed: number; total: number }) {
   return (
     <div className="bg-white border-b border-gray-100 px-4 h-12 flex items-center justify-between shrink-0">
-      {/* 로고 — 클릭 시 사이트 메인으로 */}
       <button
         onClick={() => chrome.tabs.create({ url: SITE_URL })}
         className="text-sm font-black tracking-tight text-gray-900 hover:opacity-70 transition-opacity"
@@ -223,17 +270,33 @@ function LoginScreen() {
 
 // ── 붙여넣기 영역 ─────────────────────────────────────
 
-function PasteArea({ value, onChange, hasDetection, hasText }: {
+function PasteArea({ value, onChange, hasDetection, hasText, onSubmit }: {
   value: string; onChange: (v: string) => void
   hasDetection: boolean; hasText: boolean
+  onSubmit?: () => void
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
+
+  // textarea 높이를 내용에 맞게 자동 조절
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.max(96, el.scrollHeight) + 'px'
+  }, [value])
 
   const borderColor = hasDetection
     ? 'border-blue-300 bg-blue-50/40'
     : hasText
       ? 'border-red-200 bg-white'
       : 'border-blue-200 bg-blue-50/60'
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Enter' && !e.shiftKey && hasDetection && onSubmit) {
+      e.preventDefault()
+      onSubmit()
+    }
+  }
 
   return (
     <div
@@ -253,7 +316,9 @@ function PasteArea({ value, onChange, hasDetection, hasText }: {
         ref={ref}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full h-24 px-3 py-2.5 text-xs font-mono text-gray-600 leading-relaxed resize-none bg-transparent focus:outline-none"
+        onKeyDown={handleKeyDown}
+        className="w-full px-3 py-2.5 text-xs font-mono text-gray-600 leading-relaxed resize-none bg-transparent focus:outline-none"
+        style={{ minHeight: 96 }}
         placeholder=" "
         spellCheck={false}
       />
@@ -267,29 +332,39 @@ function PasteArea({ value, onChange, hasDetection, hasText }: {
   )
 }
 
-// ── 게임 카드 — 투톤 (이모지 없음) ────────────────────
+// ── 게임 카드 ────────────────────────────────────────
 
-function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
-  const hasResult   = result !== undefined
-  const isCompleted = result?.completed === true
-  const isFailed    = hasResult && !isCompleted
-  const light       = isLightColor(game.color)
-  const textOn      = light ? 'text-gray-900' : 'text-white'
-  const subOn       = light ? 'text-gray-600' : 'text-white/70'
+function GameCard({ game, result, detectedParsed }: {
+  game: GameInfo
+  result?: GameResult
+  detectedParsed?: ParsedResult
+}) {
+  const hasResult    = result !== undefined
+  const isCompleted  = result?.completed === true
+  const isPreview    = !hasResult && detectedParsed !== undefined
+  const light        = isLightColor(game.color)
+  const textOn       = light ? 'text-gray-900' : 'text-white'
+  const subOn        = light ? 'text-gray-600' : 'text-white/70'
+
+  // 표시할 점수: 실제 결과 > 예상 점수 > 없음
+  const displayScore    = hasResult ? result!.score : isPreview ? detectedParsed!.score : null
+  const displayComplete = hasResult ? isCompleted    : isPreview ? detectedParsed!.completed : null
 
   const card = (
-    <div className={`rounded-2xl overflow-hidden border border-gray-100 transition-all ${
-      game.url ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''
-    }`}>
-      {/* 상단: 점수 영역 (이미지 자리) */}
+    <div className={`rounded-2xl overflow-hidden border transition-all ${
+      isPreview
+        ? 'border-blue-300 ring-2 ring-blue-200/60'
+        : 'border-gray-100'
+    } ${game.url ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''}`}>
+      {/* 상단: 점수 영역 */}
       <div className="h-[68px] flex items-center justify-center bg-white">
-        {hasResult ? (
+        {displayScore !== null ? (
           <div className="flex flex-col items-center gap-0.5">
-            <span className={`text-2xl font-black leading-none ${isCompleted ? 'text-gray-900' : 'text-red-500'}`}>
-              {(result!.score > 0 ? '+' : '') + result!.score}점
+            <span className={`text-2xl font-black leading-none ${displayComplete ? (isPreview ? 'text-blue-600' : 'text-gray-900') : 'text-red-500'}`}>
+              {(displayScore > 0 ? '+' : '') + displayScore}점
             </span>
-            <span className={`text-[11px] font-semibold ${isCompleted ? 'text-gray-400' : 'text-red-400'}`}>
-              {isCompleted ? '클리어' : '실패'}
+            <span className={`text-[11px] font-semibold ${displayComplete ? (isPreview ? 'text-blue-400' : 'text-gray-400') : 'text-red-400'}`}>
+              {isPreview ? '예상' : (displayComplete ? '클리어' : '실패')}
             </span>
           </div>
         ) : (
@@ -297,15 +372,15 @@ function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
         )}
       </div>
 
-      {/* 하단: 게임명 바 (게임 컬러) */}
+      {/* 하단: 게임명 바 */}
       <div
         className="flex items-center justify-between px-3 py-2"
-        style={{ backgroundColor: hasResult ? game.color : game.color + 'cc' }}
+        style={{ backgroundColor: (hasResult || isPreview) ? game.color : game.color + 'cc' }}
       >
         <p className={`text-sm font-black truncate ${textOn}`}>{game.name}</p>
         {game.url && (
           <span className={`text-xs font-semibold shrink-0 ml-2 ${subOn}`}>
-            {isFailed ? '재도전 →' : hasResult ? '재도전 →' : '→'}
+            {hasResult ? '재도전 →' : isPreview ? '바로가기 →' : '→'}
           </span>
         )}
         {!game.url && (
@@ -321,43 +396,15 @@ function GameCard({ game, result }: { game: GameInfo; result?: GameResult }) {
   return card
 }
 
-// ── 감지 결과 + 완료 화면 ────────────────────────────
+// ── 완료 화면 ─────────────────────────────────────────
 
-function DetectedResultCard({ detection }: { detection: DetectedResult }) {
+function SavedScreen({ detection, games, onReset }: {
+  detection: DetectedResult
+  games: GameInfo[]
+  onReset: () => void
+}) {
   const { slug, parsed } = detection
-  const game = GAME_BY_SLUG[slug]
-  const isOk = parsed.completed
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="h-1" style={{ background: isOk ? (game?.color ?? '#6b7280') : '#f87171' }} />
-      <div className="px-4 py-3 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-            {game?.name ?? slug}
-          </p>
-          <p className={`text-2xl font-black ${isOk ? 'text-gray-900' : 'text-red-500'}`}>
-            {parsed.score > 0 ? '+' : ''}{parsed.score}점
-          </p>
-          {parsed.attempts != null && (
-            <p className="text-xs text-gray-400 mt-0.5">
-              {parsed.attempts}{parsed.max_attempts ? `/${parsed.max_attempts}` : ''}번 시도
-            </p>
-          )}
-        </div>
-        <span className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
-          isOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-500'
-        }`}>
-          {isOk ? '클리어' : '실패'}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-function SavedScreen({ detection, onReset }: { detection: DetectedResult; onReset: () => void }) {
-  const { slug, parsed } = detection
-  const game = GAME_BY_SLUG[slug]
+  const game = games.find(g => g.slug === slug)
   const isOk = parsed.completed
 
   return (

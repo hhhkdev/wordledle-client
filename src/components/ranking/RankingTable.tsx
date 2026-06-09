@@ -12,6 +12,8 @@ interface RankingEntry {
   totalScore: number
   completedCount: number
   primaryStat: number | null
+  avgDailyScore: number
+  activeDays: number
 }
 
 interface RankingTableProps {
@@ -22,6 +24,7 @@ interface RankingTableProps {
   showDots?: boolean
   friendIds?: Set<string>
   onFriendChange?: (userId: string, added: boolean) => void
+  sortKey?: string
 }
 
 function formatTime(seconds: number): string {
@@ -41,7 +44,7 @@ const TOP_RANK_STYLES = [
 
 export default function RankingTable({
   entries, games, currentUserId, isKkomanttle, showDots,
-  friendIds = new Set(),
+  friendIds = new Set(), sortKey,
 }: RankingTableProps) {
   if (entries.length === 0) {
     return (
@@ -141,6 +144,17 @@ export default function RankingTable({
                     </div>
                   )}
                 </>
+              ) : sortKey === 'tier' ? (
+                /* 티어순: 일평균 점수를 주 지표로 */
+                <div className="text-right">
+                  <p className={cn('text-xl font-black tabular-nums leading-tight', isMe ? 'text-blue-700' : 'text-gray-900')}>
+                    {entry.avgDailyScore}
+                    <span className={cn('text-xs font-semibold ml-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>점/일</span>
+                  </p>
+                  <p className={cn('text-[11px] mt-0.5', isMe ? 'text-blue-400' : 'text-gray-400')}>
+                    {entry.activeDays}일 활동
+                  </p>
+                </div>
               ) : (
                 <div className="text-right">
                   <p className={cn('text-xl font-black tabular-nums leading-tight', isMe ? 'text-blue-700' : 'text-gray-900')}>

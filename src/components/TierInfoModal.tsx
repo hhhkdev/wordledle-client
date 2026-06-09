@@ -112,15 +112,17 @@ export default function TierInfoModal({ open, onClose, currentTier }: TierInfoMo
               >
                 <TierBadge tier={group.representative} size="sm" className="w-24 justify-center shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-gray-900">{group.label}</span>
-                    {isCurrentTier && (
-                      <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md">현재</span>
-                    )}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-sm font-black text-gray-900 shrink-0">{group.label}</span>
+                      {isCurrentTier && (
+                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md shrink-0">현재</span>
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400 shrink-0 tabular-nums">{group.range}</span>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">{group.detail}</p>
                 </div>
-                <span className="text-xs font-semibold text-gray-400 shrink-0 tabular-nums">{group.range}</span>
               </div>
             )
           })}

@@ -103,7 +103,7 @@ function Board({ word, guesses, currentGuess, totalRows }: {
             return (
               <div key={ci} className={cn(
                 'w-12 h-12 border-2 flex items-center justify-center',
-                'text-lg font-black uppercase rounded-lg transition-colors duration-300',
+                'text-lg font-black uppercase rounded-lg transition-colors duration-300 font-game',
                 TILE_COLORS[state] ?? TILE_COLORS.empty,
               )}>{letter}</div>
             )
@@ -133,7 +133,7 @@ function Keyboard({ keyStates, onKey }: {
                   'transition-colors active:opacity-60',
                   isAction
                     ? 'flex-[1.5] text-[11px] font-black tracking-tight bg-gray-300 text-gray-800'
-                    : 'flex-1 font-bold text-sm',
+                    : 'flex-1 font-bold text-sm font-game',
                   !isAction && KEY_COLORS[keyStates[key] ?? 'unused'],
                 )}
               >{key}</button>
@@ -273,7 +273,7 @@ function ResultModal({ won, words, word1Guesses, word2Guesses, onClose }: {
                 isSolved ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200',
               )}>
                 <p className="text-xs font-bold text-gray-500 mb-1">단어 {i + 1}</p>
-                <p className={cn('text-base font-black uppercase tracking-widest',
+                <p className={cn('text-base font-black uppercase tracking-widest font-game',
                   isSolved ? 'text-green-700' : 'text-red-500')}>{word}</p>
                 {isSolved && <p className="text-xs text-green-600 mt-0.5">{cnt}번</p>}
               </div>
@@ -526,7 +526,7 @@ export default function WordledlePage() {
                 <span className="text-green-500 font-black text-sm">✓ 단어 1 완료</span>
                 <span className="text-xs text-green-600">{word1Guesses.length}번</span>
               </div>
-              <span className="text-sm font-black uppercase tracking-widest text-green-700">{words[0]}</span>
+              <span className="text-sm font-black uppercase tracking-widest text-green-700 font-game">{words[0]}</span>
             </div>
           )}
 

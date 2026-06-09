@@ -4,12 +4,18 @@ import { useEffect, useRef, useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
-import { Friend, User } from '@/types'
-import { UserPlus, UserMinus, Users, ChevronRight, ArrowUpDown, Check } from 'lucide-react'
+import { Friend, User, GameResult, Game } from '@/types'
+import { UserPlus, UserMinus, Users, ChevronRight, ArrowUpDown, Check, Rss } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+
+// ── 피드 타입 ────────────────────────────────────────
+interface FeedItem {
+  user: User
+  result: GameResult & { game: Game }
+}
 
 interface FriendStats {
   totalScore: number
@@ -107,6 +113,7 @@ function SortDropdown({ value, onChange }: { value: SortKey; onChange: (v: SortK
 export default function FriendsPage() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
+  const [tab, setTab] = useState<'list' | 'feed'>('list')
   const [friends, setFriends] = useState<(Friend & { friend: User })[]>([])
   const [friendStats, setFriendStats] = useState<Record<string, FriendStats>>({})
   const [totalGames, setTotalGames] = useState(0)
@@ -119,6 +126,9 @@ export default function FriendsPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchDone, setSearchDone] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([])
+  const [feedLoading, setFeedLoading] = useState(false)
+  const [feedLoaded, setFeedLoaded] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/login')
@@ -314,16 +324,66 @@ export default function FriendsPage() {
     setFriends(prev => prev.filter(f => f.friend_id !== friendId))
   }
 
+  // 피드 탭 진입 시 데이터 로드
+  useEffect(() => {
+    if (tab !== 'feed' || feedLoaded || !user || friends.length === 0) return
+    setFeedLoading(true)
+    const friendIds = friends.map(f => f.friend_id)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const since = sevenDaysAgo.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+    createClient()
+      .from('results')
+      .select('*, game:games(*), user:users(id, nickname, created_at, is_admin)')
+      .in('user_id', friendIds)
+      .gte('date', since)
+      .order('created_at', { ascending: false })
+      .limit(80)
+      .then(({ data }) => {
+        setFeedItems((data ?? []) as FeedItem[])
+        setFeedLoading(false)
+        setFeedLoaded(true)
+      })
+  }, [tab, feedLoaded, user, friends])
+
   if (authLoading || !user) return null
 
   const sortedFriends = sortFriends(friends, friendStats, sortKey)
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">친구</h1>
-        <p className="text-sm text-gray-500 mt-1">친구를 추가하면 친구 랭킹을 볼 수 있어요.</p>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">친구</h1>
+          <p className="text-sm text-gray-500 mt-0.5">친구를 추가하면 친구 랭킹을 볼 수 있어요.</p>
+        </div>
       </div>
+
+      {/* 탭 */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-5">
+        <button
+          onClick={() => setTab('list')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-colors',
+            tab === 'list' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+          )}
+        >
+          <Users size={14} />친구 목록
+        </button>
+        <button
+          onClick={() => setTab('feed')}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-colors',
+            tab === 'feed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+          )}
+        >
+          <Rss size={14} />피드
+        </button>
+      </div>
+
+      {tab === 'feed' ? (
+        <FeedTab items={feedItems} loading={feedLoading} hasFriends={friends.length > 0} />
+      ) : (<>
 
       {/* 친구 추가 */}
       <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-5">
@@ -449,6 +509,83 @@ export default function FriendsPage() {
         )}
         </div>
       </div>
+      </>)}
     </div>
+  )
+}
+
+// ── 피드 탭 ──────────────────────────────────────────
+function FeedTab({ items, loading, hasFriends }: { items: FeedItem[]; loading: boolean; hasFriends: boolean }) {
+  if (!hasFriends) return (
+    <div className="text-center py-16 text-gray-400">
+      <p className="text-3xl mb-2">👥</p>
+      <p className="text-sm font-semibold">친구를 추가하면 피드가 보여요</p>
+    </div>
+  )
+
+  if (loading) return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-16 rounded-2xl bg-gray-100 animate-pulse" />
+      ))}
+    </div>
+  )
+
+  if (items.length === 0) return (
+    <div className="text-center py-16 text-gray-400">
+      <p className="text-3xl mb-2">📭</p>
+      <p className="text-sm font-semibold">최근 7일간 친구 활동이 없어요</p>
+    </div>
+  )
+
+  // 날짜별 그룹
+  const byDate = new Map<string, FeedItem[]>()
+  for (const item of items) {
+    const d = item.result.date
+    if (!byDate.has(d)) byDate.set(d, [])
+    byDate.get(d)!.push(item)
+  }
+
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+
+  return (
+    <div className="flex flex-col gap-4">
+      {[...byDate.entries()].map(([date, dayItems]) => (
+        <div key={date}>
+          <p className="text-xs font-bold text-gray-400 mb-2 px-0.5">
+            {date === today ? '오늘' : new Date(date + 'T00:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {dayItems.map(item => (
+              <FeedCard key={`${item.result.id}`} item={item} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FeedCard({ item }: { item: FeedItem }) {
+  const { user, result } = item
+  const isOk = result.completed
+  return (
+    <Link href={`/users/${encodeURIComponent(user.nickname)}`}
+      className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 px-4 py-3 hover:shadow-sm transition-all active:opacity-70">
+      <div className="w-1.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: result.game?.color ?? '#9ca3af' }} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-gray-900 truncate">{user.nickname}</p>
+        <p className="text-xs text-gray-400 truncate">{result.game?.name ?? '게임'}</p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className={cn('text-base font-black tabular-nums', isOk ? 'text-gray-900' : 'text-red-400')}>
+          {(result.score ?? 0) > 0 ? '+' : ''}{result.score ?? 0}점
+        </p>
+        <p className={cn('text-[11px] font-semibold', isOk ? 'text-green-500' : 'text-red-400')}>
+          {isOk ? '클리어' : '실패'}
+          {result.attempts != null && isOk && ` · ${result.attempts}번`}
+        </p>
+      </div>
+    </Link>
   )
 }

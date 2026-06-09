@@ -5,12 +5,16 @@ import { useParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { Game, GameResult, User } from '@/types'
-import { CheckCircle2, XCircle, Minus, ChevronDown, UserPlus, UserMinus, Pencil, Check, X } from 'lucide-react'
+import { CheckCircle2, XCircle, Minus, ChevronDown, UserPlus, UserMinus, Pencil, Check, X, GitCompare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { validateNickname } from '@/lib/validateNickname'
 import { computeUserTier } from '@/lib/tiers'
+import { computeAchievements } from '@/lib/achievements'
 import TierBadge from '@/components/TierBadge'
 import TierInfoModal from '@/components/TierInfoModal'
+import ActivityCalendar from '@/components/ActivityCalendar'
+import AchievementGrid from '@/components/AchievementGrid'
+import CompareModal from '@/components/CompareModal'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
@@ -74,6 +78,7 @@ export default function UserProfilePage() {
   const [nickError, setNickError] = useState('')
   const [nickLoading, setNickLoading] = useState(false)
   const [showTierInfo, setShowTierInfo] = useState(false)
+  const [showCompare, setShowCompare] = useState(false)
 
   const decodedNickname = decodeURIComponent(nickname)
   const isMe = me?.nickname === decodedNickname
@@ -137,6 +142,16 @@ export default function UserProfilePage() {
   const todayCompleted = (byDate.get(today) ?? []).filter(r => r.completed).length
   const totalScore = gameStats.reduce((sum, s) => sum + s.totalScore, 0)
   const tier = computeUserTier(allResults.map(r => ({ date: r.date, score: r.score ?? 0 })))
+  const achievements = computeAchievements(allResults, games.length)
+
+  // 일평균 점수 계산
+  const dailyScoreMap: Record<string, number> = {}
+  for (const r of allResults) dailyScoreMap[r.date] = (dailyScoreMap[r.date] ?? 0) + (r.score ?? 0)
+  const dailyScores = Object.values(dailyScoreMap)
+  const activeDays = dailyScores.length
+  const avgDailyScore = activeDays > 0
+    ? Math.round(dailyScores.reduce((a, b) => a + b, 0) / activeDays * 10) / 10
+    : 0
 
   async function handleAddFriend() {
     if (!me || !profileUser) return
@@ -245,7 +260,7 @@ export default function UserProfilePage() {
             </div>
           </div>
 
-          {/* 오늘 완료 · 총점 */}
+          {/* 오늘 완료 · 총점 · 일평균 */}
           <div className="flex gap-2">
             <div className="flex-1 sm:flex-none text-center bg-gray-50 rounded-2xl px-4 py-2.5">
               <p className="text-2xl font-black text-gray-900">
@@ -257,12 +272,16 @@ export default function UserProfilePage() {
               <p className="text-2xl font-black text-gray-900">{totalScore}</p>
               <p className="text-xs font-semibold text-gray-400 mt-0.5">총 점수</p>
             </div>
+            <div className="flex-1 sm:flex-none text-center bg-gray-50 rounded-2xl px-4 py-2.5">
+              <p className="text-2xl font-black text-gray-900">{avgDailyScore}</p>
+              <p className="text-xs font-semibold text-gray-400 mt-0.5">일평균</p>
+            </div>
           </div>
         </div>
 
-        {/* 친구 버튼 (타인 프로필 + 로그인 상태) */}
+        {/* 친구 버튼 + 비교 버튼 (타인 프로필 + 로그인 상태) */}
         {!isMe && me && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
             {isFriend ? (
               <button
                 onClick={handleRemoveFriend}
@@ -282,9 +301,37 @@ export default function UserProfilePage() {
                 {friendLoading ? '처리 중...' : '친구 추가'}
               </button>
             )}
+            <button
+              onClick={() => setShowCompare(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-sm font-bold active:opacity-70 transition-opacity"
+            >
+              <GitCompare size={15} />
+              나와 비교
+            </button>
           </div>
         )}
       </div>
+
+      {/* 활동 캘린더 */}
+      {allResults.length > 0 && (
+        <section className="mb-5">
+          <h2 className="text-lg font-black text-gray-900 mb-3">활동 기록</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-4">
+            <ActivityCalendar results={allResults.map(r => ({ date: r.date, score: r.score ?? 0 }))} />
+          </div>
+        </section>
+      )}
+
+      {/* 업적 */}
+      <section className="mb-5">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-lg font-black text-gray-900">업적</h2>
+          <span className="text-sm font-semibold text-gray-400">
+            {achievements.filter(a => a.unlocked).length}/{achievements.length}
+          </span>
+        </div>
+        <AchievementGrid achievements={achievements} />
+      </section>
 
       {/* 게임별 통계 */}
       {gameStats.some(s => s.totalPlayed > 0) && (
@@ -314,6 +361,16 @@ export default function UserProfilePage() {
       </section>
 
       <TierInfoModal open={showTierInfo} onClose={() => setShowTierInfo(false)} currentTier={tier} />
+
+      {showCompare && me && profileUser && (
+        <CompareModal
+          me={me}
+          other={profileUser}
+          otherResults={allResults}
+          games={games}
+          onClose={() => setShowCompare(false)}
+        />
+      )}
     </div>
   )
 }
