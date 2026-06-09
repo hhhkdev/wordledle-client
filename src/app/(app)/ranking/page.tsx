@@ -7,7 +7,8 @@ import { Game, GameResult, User } from '@/types'
 import RankingTable from '@/components/ranking/RankingTable'
 import RankingFilterSheet, { FilterState } from '@/components/ranking/RankingFilterSheet'
 import SortDropdown, { SortKey } from '@/components/ranking/SortDropdown'
-import { Users, Globe, SlidersHorizontal } from 'lucide-react'
+import TierInfoModal from '@/components/TierInfoModal'
+import { Users, Globe, SlidersHorizontal, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Tab = 'global' | 'friends'
@@ -95,6 +96,7 @@ function makeDefaultFilter(): FilterState {
 export default function RankingPage() {
   const { user } = useAuth()
   const [tab, setTab] = useState<Tab>('global')
+  const [showTierInfo, setShowTierInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [games, setGames] = useState<Game[]>([])
   const [filter, setFilter] = useState<FilterState>(makeDefaultFilter)        // 시트 draft
@@ -177,9 +179,18 @@ export default function RankingPage() {
 
   return (
     <div>
-      <div className="mb-5">
+      <div className="mb-5 flex items-center justify-between">
         <h1 className="text-3xl font-black text-gray-900 tracking-tight">랭킹</h1>
+        <button
+          onClick={() => setShowTierInfo(true)}
+          className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-100"
+        >
+          <Info size={13} />
+          티어 기준
+        </button>
       </div>
+
+      <TierInfoModal open={showTierInfo} onClose={() => setShowTierInfo(false)} />
 
       <p className="text-sm text-gray-400 mb-4">{getPeriodLabel(appliedFilter)}</p>
 

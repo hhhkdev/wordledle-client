@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { validateNickname } from '@/lib/validateNickname'
 import { computeUserTier } from '@/lib/tiers'
 import TierBadge from '@/components/TierBadge'
+import TierInfoModal from '@/components/TierInfoModal'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
@@ -72,6 +73,7 @@ export default function UserProfilePage() {
   const [newNickname, setNewNickname] = useState('')
   const [nickError, setNickError] = useState('')
   const [nickLoading, setNickLoading] = useState(false)
+  const [showTierInfo, setShowTierInfo] = useState(false)
 
   const decodedNickname = decodeURIComponent(nickname)
   const isMe = me?.nickname === decodedNickname
@@ -234,7 +236,9 @@ export default function UserProfilePage() {
               </div>
             )}
             <div className="flex items-center gap-2 mt-1">
-              <TierBadge tier={tier} size="sm" />
+              <button onClick={() => setShowTierInfo(true)} className="cursor-pointer">
+                <TierBadge tier={tier} size="sm" />
+              </button>
               <p className="text-xs text-gray-400">
                 {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
               </p>
@@ -308,6 +312,8 @@ export default function UserProfilePage() {
           </div>
         )}
       </section>
+
+      <TierInfoModal open={showTierInfo} onClose={() => setShowTierInfo(false)} currentTier={tier} />
     </div>
   )
 }
@@ -432,6 +438,7 @@ function DailyRecordRow({ record, games, isToday }: { record: DailyRecord; games
           ))}
         </div>
       )}
+
     </div>
   )
 }
