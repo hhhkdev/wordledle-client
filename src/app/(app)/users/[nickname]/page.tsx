@@ -8,6 +8,8 @@ import { Game, GameResult, User } from '@/types'
 import { CheckCircle2, XCircle, Minus, ChevronDown, UserPlus, UserMinus, Pencil, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { validateNickname } from '@/lib/validateNickname'
+import { computeUserTier } from '@/lib/tiers'
+import TierBadge from '@/components/TierBadge'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
@@ -132,6 +134,7 @@ export default function UserProfilePage() {
   const today = getKSTDate()
   const todayCompleted = (byDate.get(today) ?? []).filter(r => r.completed).length
   const totalScore = gameStats.reduce((sum, s) => sum + s.totalScore, 0)
+  const tier = computeUserTier(allResults.map(r => ({ date: r.date, score: r.score ?? 0 })))
 
   async function handleAddFriend() {
     if (!me || !profileUser) return
@@ -230,9 +233,12 @@ export default function UserProfilePage() {
                 )}
               </div>
             )}
-            <p className="text-xs text-gray-400 mt-1">
-              {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <TierBadge tier={tier} size="sm" />
+              <p className="text-xs text-gray-400">
+                {profileUser && new Date(profileUser.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 가입
+              </p>
+            </div>
           </div>
 
           {/* 오늘 완료 · 총점 */}

@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { Game, GameResult, User } from '@/types'
 import { cn } from '@/lib/utils'
+import { computeUserTier } from '@/lib/tiers'
+import TierBadge from '@/components/TierBadge'
 
 interface RankingEntry {
   user: User
@@ -60,6 +62,7 @@ export default function RankingTable({
         const result = entry.results[0]
         const meta = result?.metadata as { time_seconds?: number } | null
         const isFriend = friendIds.has(entry.user.id)
+        const tier = computeUserTier(entry.results.map(r => ({ date: r.date, score: r.score ?? 0 })))
 
         return (
           <Link
@@ -93,6 +96,7 @@ export default function RankingTable({
                 )}>
                   {entry.user.nickname}
                 </span>
+                <TierBadge tier={tier} size="xs" className="shrink-0" />
                 {isMe && (
                   <span className="shrink-0 text-xs font-semibold text-blue-400 bg-blue-100 px-1.5 py-0.5 rounded-md">나</span>
                 )}
