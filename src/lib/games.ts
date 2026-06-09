@@ -99,13 +99,16 @@ export function getGameCurrentPeriodStart(_slug: string): string {
 
 // ── 점수 계산 헬퍼 ──────────────────────────────────────────
 
-/**
- * 클리어 점수: 기본 점수 + 절약한 시도 수
- * 실패(attempts === null, 즉 X/N) 시 기본 점수의 절반을 페널티로 적용
- */
-function scoreCleared(attempts: number | null, maxAttempts: number, basePoints: number): number {
-  if (attempts === null) return -Math.floor(basePoints / 2)
-  return basePoints + (maxAttempts - attempts)
+/** 6회 도전 게임 (Wordle, 꼬들, 꼬오오오오들, Word Hurdle) */
+function score6(attempts: number | null): number {
+  if (attempts === null) return -25
+  return ([50, 45, 40, 30, 20, 10] as const)[attempts - 1] ?? -25
+}
+
+/** 5회 도전 게임 (카카오 오늘의 단어) */
+function score5(attempts: number | null): number {
+  if (attempts === null) return -20
+  return ([40, 35, 30, 20, 10] as const)[attempts - 1] ?? -20
 }
 
 // ── 파서 ─────────────────────────────────────────────────────
@@ -118,76 +121,54 @@ export function parseGameResult(
 
   switch (gameSlug) {
     case 'wordle': {
-      // "Wordle 1,806 4/6" or "Wordle 1,806 X/6"
       const match = text.match(/Wordle\s+[\d,]+\s+([X\d])\/6/i)
       if (!match) return null
       const attempts = match[1] === 'X' ? null : parseInt(match[1])
       const puzzleMatch = text.match(/Wordle\s+([\d,]+)/)
       return {
-        score: scoreCleared(attempts, 6, 10),
-        attempts,
-        max_attempts: 6,
-        completed: match[1] !== 'X',
-        metadata: {
-          puzzle_number: puzzleMatch ? parseInt(puzzleMatch[1].replace(/,/g, '')) : null,
-        },
+        score: score6(attempts),
+        attempts, max_attempts: 6, completed: match[1] !== 'X',
+        metadata: { puzzle_number: puzzleMatch ? parseInt(puzzleMatch[1].replace(/,/g, '')) : null },
       }
     }
 
     case 'kkodle': {
-      // "꼬들 1610 5/6 Kordle.Kr 🔥3"
       const match = text.match(/꼬들\s+(\d+)\s+([X\d])\/6/)
       if (!match) return null
       const attempts = match[2] === 'X' ? null : parseInt(match[2])
       const streakMatch = text.match(/🔥(\d+)/)
       return {
-        score: scoreCleared(attempts, 6, 10),
-        attempts,
-        max_attempts: 6,
-        completed: match[2] !== 'X',
-        metadata: {
-          puzzle_number: parseInt(match[1]),
-          streak: streakMatch ? parseInt(streakMatch[1]) : null,
-        },
+        score: score6(attempts),
+        attempts, max_attempts: 6, completed: match[2] !== 'X',
+        metadata: { puzzle_number: parseInt(match[1]), streak: streakMatch ? parseInt(streakMatch[1]) : null },
       }
     }
 
     case 'kkooooodle': {
-      // "꼬오오오오들 1310 5/6"
       const match = text.match(/꼬오오오오들\s+(\d+)\s+([X\d])\/6/)
       if (!match) return null
       const attempts = match[2] === 'X' ? null : parseInt(match[2])
       return {
-        score: scoreCleared(attempts, 6, 20),
-        attempts,
-        max_attempts: 6,
-        completed: match[2] !== 'X',
-        metadata: {
-          puzzle_number: parseInt(match[1]),
-        },
+        score: score6(attempts),
+        attempts, max_attempts: 6, completed: match[2] !== 'X',
+        metadata: { puzzle_number: parseInt(match[1]) },
       }
     }
 
     case 'kkomanttle': {
-      // "N번째 꼬맨틀을 풀었습니다!\n추측 횟수: N\n소요 시간: HH시간MM분SS초\n최대 유사도: N.NN"
       const completed = text.includes('꼬맨틀을 풀었습니다')
       if (!completed && !text.includes('꼬맨틀')) return null
-
       const puzzleMatch = text.match(/(\d+)번째 꼬맨틀/)
       const attemptsMatch = text.match(/추측 횟수:\s*(\d+)/)
       const timeMatch = text.match(/소요 시간:\s*(\d+)시간(\d+)분(\d+)초/)
       const similarityMatch = text.match(/최대 유사도:\s*([\d.]+)/)
-
       const attempts = attemptsMatch ? parseInt(attemptsMatch[1]) : null
       const timeSeconds = timeMatch
         ? parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3])
         : null
-
       return {
-        score: completed ? 20 : 0,
-        attempts,
-        max_attempts: null,
-        completed,
+        score: completed ? 50 : 0,
+        attempts, max_attempts: null, completed,
         metadata: {
           puzzle_number: puzzleMatch ? parseInt(puzzleMatch[1]) : null,
           time_seconds: timeSeconds,
@@ -197,68 +178,44 @@ export function parseGameResult(
     }
 
     case 'kakao-word': {
-      // 포맷 A: "오늘의 단어 맞히기 성공!" (기존)
-      // 포맷 B: "N번째 정답자입니다!" (빠른 풀이 보너스 +5점)
       const isFormatA = text.includes('오늘의 단어') || text.toLowerCase().includes("today's word")
       const earlyMatch = text.match(/(\d+)번째\s*정답자입니다/)
       const isFormatB = !!earlyMatch
       if (!isFormatA && !isFormatB) return null
-
-      const completed = isFormatB
-        ? true
-        : text.includes('성공') || text.toLowerCase().includes('success')
-
-      // 이모지 행(⬛🟨🟩🟫로만 구성된 줄) 개수로 시도 횟수 산출
-      const emojiRowPattern = /^[⬛🟨🟩🟫]+$/
-      const emojiRows = text.split('\n').filter(l => emojiRowPattern.test(l.trim()))
+      const completed = isFormatB ? true : text.includes('성공') || text.toLowerCase().includes('success')
+      const emojiRows = text.split('\n').filter(l => /^[⬛🟨🟩🟫]+$/.test(l.trim()))
       const attempts = emojiRows.length > 0 ? emojiRows.length : null
-
-      const bonus = isFormatB ? 5 : 0
       return {
-        score: scoreCleared(attempts, 5, 10) + bonus,
-        attempts,
-        max_attempts: 5,
-        completed,
-        metadata: {
-          puzzle_number: null,
-          early_solver_rank: earlyMatch ? parseInt(earlyMatch[1]) : null,
-        },
+        score: score5(completed ? attempts : null),
+        attempts, max_attempts: 5, completed,
+        metadata: { puzzle_number: null, early_solver_rank: earlyMatch ? parseInt(earlyMatch[1]) : null },
       }
     }
 
     case 'wordhurdle-6': {
-      // "Word Hurdle 3201 5/6 #wordhurdle" (6-letter, no size prefix)
-      const wh6Match = text.match(/Word\s+Hurdle\s+(\d+)\s+(\d+)\/(\d+)/i)
-      if (!wh6Match) return null
-      const puzzleNumber = parseInt(wh6Match[1])
-      const attempts = parseInt(wh6Match[2])
-      const maxAttempts = parseInt(wh6Match[3])
+      const m = text.match(/Word\s+Hurdle\s+(\d+)\s+(\d+)\/(\d+)/i)
+      if (!m) return null
+      const attempts = parseInt(m[2])
+      const maxAttempts = parseInt(m[3])
       const completed = attempts <= maxAttempts
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
-        attempts,
-        max_attempts: maxAttempts,
-        completed,
-        metadata: { puzzle_number: puzzleNumber },
+        score: score6(completed ? attempts : null),
+        attempts, max_attempts: maxAttempts, completed,
+        metadata: { puzzle_number: parseInt(m[1]) },
       }
     }
 
     case 'wordhurdle-4':
     case 'wordhurdle-5': {
-      // "Word Hurdle 4-letter 3201 4/6 #wordhurdle"
-      const whMatch = text.match(/Word\s+Hurdle\s+\d+-letter\s+(\d+)\s+(\d+)\/(\d+)/i)
-      if (!whMatch) return null
-      const puzzleNumber = parseInt(whMatch[1])
-      const attempts = parseInt(whMatch[2])
-      const maxAttempts = parseInt(whMatch[3])
+      const m = text.match(/Word\s+Hurdle\s+\d+-letter\s+(\d+)\s+(\d+)\/(\d+)/i)
+      if (!m) return null
+      const attempts = parseInt(m[2])
+      const maxAttempts = parseInt(m[3])
       const completed = attempts <= maxAttempts
-
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
-        attempts,
-        max_attempts: maxAttempts,
-        completed,
-        metadata: { puzzle_number: puzzleNumber },
+        score: score6(completed ? attempts : null),
+        attempts, max_attempts: maxAttempts, completed,
+        metadata: { puzzle_number: parseInt(m[1]) },
       }
     }
 

@@ -65,17 +65,18 @@ function clearSaved() {
 }
 
 // ── 점수 계산 ─────────────────────────────────────────
+// 단어당 30점, 게임 종료 후 남은 횟수 × 5점 보너스 (둘 다 성공한 경우만)
+// 못 푼 단어당 -15점 페널티 (시도한 단어에만 적용)
 function calcScore(word1Guesses: string[], word2Guesses: string[], words: [string, string], won: boolean): number {
   const solved1 = word1Guesses.some(g => g === words[0])
   const solved2 = word2Guesses.some(g => g === words[1])
-  const wordScore = (solved1 ? 10 : 0) + (solved2 ? 10 : 0)
+  const wordScore = (solved1 ? 30 : 0) + (solved2 ? 30 : 0)
   const remaining = MAX_GUESSES - word1Guesses.length - word2Guesses.length
-  const bonus = (solved1 && solved2) ? remaining : 0
-  // 실패 시 못 푼 단어당 -5 (시도는 했지만 정답을 못 맞힌 경우만)
+  const bonus = won ? remaining * 5 : 0
   let penalty = 0
   if (!won) {
-    if (!solved1) penalty -= 5
-    if (!solved2 && word2Guesses.length > 0) penalty -= 5
+    if (!solved1) penalty -= 15
+    if (!solved2 && word2Guesses.length > 0) penalty -= 15
   }
   return wordScore + bonus + penalty
 }

@@ -12,44 +12,48 @@ export interface Tier {
 }
 
 // 내림차순 정렬 — computeTier()가 위에서부터 조건 탐색
+//
+// 마스터 기준: 9개 게임 모두 평균 4번째에 성공 = 320점
+//   Wordle/꼬들/꼬오오/WH×3: 30점씩, 꼬맨틀: 50, 카카오: 20, 워들들(4+4=8회, 2남음): 70
+//   합계: 30×6 + 50 + 20 + 70 = 320
 export const TIERS: Tier[] = [
   // Master
-  { name: 'master',   label: '마스터',   sub: 0, color: '#7C3AED', textColor: '#fff', minAvg: 160 },
-  // Ruby I→V
-  { name: 'ruby',     label: '루비',     sub: 1, color: '#E84057', textColor: '#fff', minAvg: 155 },
-  { name: 'ruby',     label: '루비',     sub: 2, color: '#E84057', textColor: '#fff', minAvg: 150 },
-  { name: 'ruby',     label: '루비',     sub: 3, color: '#E84057', textColor: '#fff', minAvg: 145 },
-  { name: 'ruby',     label: '루비',     sub: 4, color: '#E84057', textColor: '#fff', minAvg: 140 },
-  { name: 'ruby',     label: '루비',     sub: 5, color: '#E84057', textColor: '#fff', minAvg: 135 },
-  // Diamond I→V
-  { name: 'diamond',  label: '다이아',   sub: 1, color: '#00B4FC', textColor: '#fff', minAvg: 130 },
-  { name: 'diamond',  label: '다이아',   sub: 2, color: '#00B4FC', textColor: '#fff', minAvg: 126 },
-  { name: 'diamond',  label: '다이아',   sub: 3, color: '#00B4FC', textColor: '#fff', minAvg: 122 },
-  { name: 'diamond',  label: '다이아',   sub: 4, color: '#00B4FC', textColor: '#fff', minAvg: 118 },
-  { name: 'diamond',  label: '다이아',   sub: 5, color: '#00B4FC', textColor: '#fff', minAvg: 114 },
-  // Platinum I→V
-  { name: 'platinum', label: '플래티넘', sub: 1, color: '#00C49A', textColor: '#fff', minAvg: 110 },
-  { name: 'platinum', label: '플래티넘', sub: 2, color: '#00C49A', textColor: '#fff', minAvg: 105 },
-  { name: 'platinum', label: '플래티넘', sub: 3, color: '#00C49A', textColor: '#fff', minAvg: 100 },
-  { name: 'platinum', label: '플래티넘', sub: 4, color: '#00C49A', textColor: '#fff', minAvg: 95  },
-  { name: 'platinum', label: '플래티넘', sub: 5, color: '#00C49A', textColor: '#fff', minAvg: 90  },
-  // Gold I→V
-  { name: 'gold',     label: '골드',     sub: 1, color: '#D4A017', textColor: '#fff', minAvg: 80  },
-  { name: 'gold',     label: '골드',     sub: 2, color: '#D4A017', textColor: '#fff', minAvg: 70  },
-  { name: 'gold',     label: '골드',     sub: 3, color: '#D4A017', textColor: '#fff', minAvg: 60  },
-  { name: 'gold',     label: '골드',     sub: 4, color: '#D4A017', textColor: '#fff', minAvg: 50  },
-  { name: 'gold',     label: '골드',     sub: 5, color: '#D4A017', textColor: '#fff', minAvg: 40  },
-  // Silver I→V
-  { name: 'silver',   label: '실버',     sub: 1, color: '#607D8B', textColor: '#fff', minAvg: 30  },
-  { name: 'silver',   label: '실버',     sub: 2, color: '#607D8B', textColor: '#fff', minAvg: 24  },
-  { name: 'silver',   label: '실버',     sub: 3, color: '#607D8B', textColor: '#fff', minAvg: 18  },
-  { name: 'silver',   label: '실버',     sub: 4, color: '#607D8B', textColor: '#fff', minAvg: 12  },
-  { name: 'silver',   label: '실버',     sub: 5, color: '#607D8B', textColor: '#fff', minAvg: 6   },
-  // Bronze I→V
+  { name: 'master',   label: '마스터',   sub: 0, color: '#7C3AED', textColor: '#fff', minAvg: 320 },
+  // Ruby I→V  (265~319)
+  { name: 'ruby',     label: '루비',     sub: 1, color: '#E84057', textColor: '#fff', minAvg: 310 },
+  { name: 'ruby',     label: '루비',     sub: 2, color: '#E84057', textColor: '#fff', minAvg: 299 },
+  { name: 'ruby',     label: '루비',     sub: 3, color: '#E84057', textColor: '#fff', minAvg: 288 },
+  { name: 'ruby',     label: '루비',     sub: 4, color: '#E84057', textColor: '#fff', minAvg: 277 },
+  { name: 'ruby',     label: '루비',     sub: 5, color: '#E84057', textColor: '#fff', minAvg: 265 },
+  // Diamond I→V  (200~264)
+  { name: 'diamond',  label: '다이아',   sub: 1, color: '#00B4FC', textColor: '#fff', minAvg: 252 },
+  { name: 'diamond',  label: '다이아',   sub: 2, color: '#00B4FC', textColor: '#fff', minAvg: 239 },
+  { name: 'diamond',  label: '다이아',   sub: 3, color: '#00B4FC', textColor: '#fff', minAvg: 226 },
+  { name: 'diamond',  label: '다이아',   sub: 4, color: '#00B4FC', textColor: '#fff', minAvg: 213 },
+  { name: 'diamond',  label: '다이아',   sub: 5, color: '#00B4FC', textColor: '#fff', minAvg: 200 },
+  // Platinum I→V  (130~199)
+  { name: 'platinum', label: '플래티넘', sub: 1, color: '#00C49A', textColor: '#fff', minAvg: 186 },
+  { name: 'platinum', label: '플래티넘', sub: 2, color: '#00C49A', textColor: '#fff', minAvg: 172 },
+  { name: 'platinum', label: '플래티넘', sub: 3, color: '#00C49A', textColor: '#fff', minAvg: 158 },
+  { name: 'platinum', label: '플래티넘', sub: 4, color: '#00C49A', textColor: '#fff', minAvg: 144 },
+  { name: 'platinum', label: '플래티넘', sub: 5, color: '#00C49A', textColor: '#fff', minAvg: 130 },
+  // Gold I→V  (60~129)
+  { name: 'gold',     label: '골드',     sub: 1, color: '#D4A017', textColor: '#fff', minAvg: 116 },
+  { name: 'gold',     label: '골드',     sub: 2, color: '#D4A017', textColor: '#fff', minAvg: 102 },
+  { name: 'gold',     label: '골드',     sub: 3, color: '#D4A017', textColor: '#fff', minAvg: 88  },
+  { name: 'gold',     label: '골드',     sub: 4, color: '#D4A017', textColor: '#fff', minAvg: 74  },
+  { name: 'gold',     label: '골드',     sub: 5, color: '#D4A017', textColor: '#fff', minAvg: 60  },
+  // Silver I→V  (10~59)
+  { name: 'silver',   label: '실버',     sub: 1, color: '#607D8B', textColor: '#fff', minAvg: 50  },
+  { name: 'silver',   label: '실버',     sub: 2, color: '#607D8B', textColor: '#fff', minAvg: 40  },
+  { name: 'silver',   label: '실버',     sub: 3, color: '#607D8B', textColor: '#fff', minAvg: 30  },
+  { name: 'silver',   label: '실버',     sub: 4, color: '#607D8B', textColor: '#fff', minAvg: 20  },
+  { name: 'silver',   label: '실버',     sub: 5, color: '#607D8B', textColor: '#fff', minAvg: 10  },
+  // Bronze I→V  (<10)
   { name: 'bronze',   label: '브론즈',   sub: 1, color: '#AD6B2A', textColor: '#fff', minAvg: 0   },
-  { name: 'bronze',   label: '브론즈',   sub: 2, color: '#AD6B2A', textColor: '#fff', minAvg: -5  },
-  { name: 'bronze',   label: '브론즈',   sub: 3, color: '#AD6B2A', textColor: '#fff', minAvg: -10 },
-  { name: 'bronze',   label: '브론즈',   sub: 4, color: '#AD6B2A', textColor: '#fff', minAvg: -15 },
+  { name: 'bronze',   label: '브론즈',   sub: 2, color: '#AD6B2A', textColor: '#fff', minAvg: -10 },
+  { name: 'bronze',   label: '브론즈',   sub: 3, color: '#AD6B2A', textColor: '#fff', minAvg: -20 },
+  { name: 'bronze',   label: '브론즈',   sub: 4, color: '#AD6B2A', textColor: '#fff', minAvg: -30 },
   { name: 'bronze',   label: '브론즈',   sub: 5, color: '#AD6B2A', textColor: '#fff', minAvg: -Infinity },
 ]
 

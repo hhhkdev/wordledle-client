@@ -20,44 +20,44 @@ const TIER_GROUPS: TierGroup[] = [
   {
     representative: TIERS[0], // master
     label: '마스터',
-    range: '160점 이상',
-    detail: '9개 게임 모두 매일 최고 점수',
+    range: '320점 이상',
+    detail: '9개 게임 평균 4번 이내 성공',
   },
   {
     representative: getTierRep('ruby', 3),
     label: '루비',
-    range: '135 ~ 159점',
-    detail: '전 게임 거의 완벽한 플레이',
+    range: '265 ~ 319점',
+    detail: '9개 게임 평균 5번 이내 성공',
   },
   {
     representative: getTierRep('diamond', 3),
     label: '다이아',
-    range: '114 ~ 134점',
-    detail: '8개 게임 고득점 유지',
+    range: '200 ~ 264점',
+    detail: '7~9개 게임, 안정적 성공',
   },
   {
     representative: getTierRep('platinum', 3),
     label: '플래티넘',
-    range: '90 ~ 113점',
-    detail: '7~8개 게임 꾸준히 참여',
+    range: '130 ~ 199점',
+    detail: '5~6개 게임 꾸준히 성공',
   },
   {
     representative: getTierRep('gold', 3),
     label: '골드',
-    range: '60 ~ 89점',
-    detail: '5~6개 게임 참여',
+    range: '60 ~ 129점',
+    detail: '3~4개 게임 성공',
   },
   {
     representative: getTierRep('silver', 3),
     label: '실버',
-    range: '18 ~ 59점',
-    detail: '3~4개 게임 참여',
+    range: '10 ~ 59점',
+    detail: '1~2개 게임, 간헐적 참여',
   },
   {
     representative: getTierRep('bronze', 3),
     label: '브론즈',
-    range: '17점 이하',
-    detail: '1~2개 게임 참여',
+    range: '9점 이하',
+    detail: '시작 단계 또는 잦은 실패',
   },
   {
     representative: UNRATED,
@@ -135,7 +135,7 @@ export default function TierInfoModal({ open, onClose, currentTier }: TierInfoMo
             <span className="font-bold text-gray-700">계산 방식</span>: 날짜별 합산 점수의 전체 평균
           </p>
           <p className="text-xs text-gray-500">
-            <span className="font-bold text-gray-700">일 최대 점수</span>: 약 160점 (9개 게임 전부 1시도 클리어)
+            <span className="font-bold text-gray-700">일 최대 점수</span>: 약 490점 (9개 게임 모두 1회 클리어)
           </p>
         </div>
       </div>

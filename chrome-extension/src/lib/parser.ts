@@ -21,9 +21,14 @@ export const GAME_NAMES: Record<string, string> = {
   'wordhurdle-6': 'Word Hurdle',
 }
 
-function scoreCleared(attempts: number | null, maxAttempts: number, basePoints: number): number {
-  if (attempts === null) return -Math.floor(basePoints / 2)
-  return basePoints + (maxAttempts - attempts)
+function score6(attempts: number | null): number {
+  if (attempts === null) return -25
+  return ([50, 45, 40, 30, 20, 10] as const)[attempts - 1] ?? -25
+}
+
+function score5(attempts: number | null): number {
+  if (attempts === null) return -20
+  return ([40, 35, 30, 20, 10] as const)[attempts - 1] ?? -20
 }
 
 export function parseGameResult(slug: string, rawText: string): ParsedResult | null {
@@ -36,7 +41,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       const attempts = m[1] === 'X' ? null : parseInt(m[1])
       const pn = text.match(/Wordle\s+([\d,]+)/)
       return {
-        score: scoreCleared(attempts, 6, 10),
+        score: score6(attempts),
         attempts, max_attempts: 6, completed: m[1] !== 'X',
         metadata: { puzzle_number: pn ? parseInt(pn[1].replace(/,/g, '')) : null },
       }
@@ -47,7 +52,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       const attempts = m[2] === 'X' ? null : parseInt(m[2])
       const streak = text.match(/🔥(\d+)/)
       return {
-        score: scoreCleared(attempts, 6, 10),
+        score: score6(attempts),
         attempts, max_attempts: 6, completed: m[2] !== 'X',
         metadata: { puzzle_number: parseInt(m[1]), streak: streak ? parseInt(streak[1]) : null },
       }
@@ -57,7 +62,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       if (!m) return null
       const attempts = m[2] === 'X' ? null : parseInt(m[2])
       return {
-        score: scoreCleared(attempts, 6, 20),
+        score: score6(attempts),
         attempts, max_attempts: 6, completed: m[2] !== 'X',
         metadata: { puzzle_number: parseInt(m[1]) },
       }
@@ -74,7 +79,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
         ? parseInt(tm[1]) * 3600 + parseInt(tm[2]) * 60 + parseInt(tm[3])
         : null
       return {
-        score: completed ? 20 : 0,
+        score: completed ? 50 : 0,
         attempts, max_attempts: null, completed,
         metadata: {
           puzzle_number: pn ? parseInt(pn[1]) : null,
@@ -91,7 +96,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       const emojiRows = text.split('\n').filter(l => /^[⬛🟨🟩🟫]+$/.test(l.trim()))
       const attempts = emojiRows.length > 0 ? emojiRows.length : null
       return {
-        score: scoreCleared(attempts, 5, 10) + (earlyM ? 5 : 0),
+        score: score5(completed ? attempts : null),
         attempts, max_attempts: 5, completed,
         metadata: { puzzle_number: null, early_solver_rank: earlyM ? parseInt(earlyM[1]) : null },
       }
@@ -103,7 +108,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       const maxAttempts = parseInt(m[3])
       const completed = attempts <= maxAttempts
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
+        score: score6(completed ? attempts : null),
         attempts, max_attempts: maxAttempts, completed,
         metadata: { puzzle_number: parseInt(m[1]) },
       }
@@ -116,7 +121,7 @@ export function parseGameResult(slug: string, rawText: string): ParsedResult | n
       const maxAttempts = parseInt(m[3])
       const completed = attempts <= maxAttempts
       return {
-        score: completed ? scoreCleared(attempts, maxAttempts, 10) : -5,
+        score: score6(completed ? attempts : null),
         attempts, max_attempts: maxAttempts, completed,
         metadata: { puzzle_number: parseInt(m[1]) },
       }
