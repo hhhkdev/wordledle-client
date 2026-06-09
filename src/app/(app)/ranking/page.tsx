@@ -5,31 +5,17 @@ import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { Game, GameResult, User } from '@/types'
 import RankingTable from '@/components/ranking/RankingTable'
+import { RankingEntry } from '@/components/ranking/types'
 import RankingFilterSheet, { FilterState } from '@/components/ranking/RankingFilterSheet'
 import SortDropdown, { SortKey } from '@/components/ranking/SortDropdown'
 import TierInfoModal from '@/components/TierInfoModal'
 import { Users, Globe, SlidersHorizontal, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { kstToday, kstTodayMonth } from '@/lib/date'
 
 type Tab = 'global' | 'friends'
 
-interface RankingEntry {
-  user: User
-  results: GameResult[]
-  totalScore: number
-  completedCount: number
-  primaryStat: number | null
-  avgDailyScore: number   // 날짜별 합산 → 평균 (티어 기준)
-  activeDays: number      // 기록이 있는 날 수
-}
 
-function kstToday(): string {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-}
-
-function kstTodayMonth(): string {
-  return kstToday().slice(0, 7)
-}
 
 function getDateRange(filter: FilterState): { gte?: string; lte?: string } | null {
   const today = kstToday()

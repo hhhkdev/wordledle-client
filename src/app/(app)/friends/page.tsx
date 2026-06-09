@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { kstToday } from '@/lib/date'
 
 // ── 피드 타입 ────────────────────────────────────────
 interface FeedItem {
@@ -33,9 +34,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'added',  label: '친구 추가순' },
 ]
 
-function kstToday() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-}
 
 function sortFriends(
   friends: (Friend & { friend: User })[],

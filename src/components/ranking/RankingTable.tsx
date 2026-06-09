@@ -1,20 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Game, GameResult, User } from '@/types'
+import { Game } from '@/types'
 import { cn } from '@/lib/utils'
 import { computeUserTier } from '@/lib/tiers'
 import TierBadge from '@/components/TierBadge'
-
-interface RankingEntry {
-  user: User
-  results: GameResult[]
-  totalScore: number
-  completedCount: number
-  primaryStat: number | null
-  avgDailyScore: number
-  activeDays: number
-}
+import { RankingEntry } from './types'
 
 interface RankingTableProps {
   entries: RankingEntry[]

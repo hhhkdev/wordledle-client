@@ -5,38 +5,18 @@ import { getDailyWords, evaluateGuess, VALID_WORDS } from '@/lib/wordledle/words
 import { useAuth } from '@/contexts/AuthContext'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
-import { Trophy, X, RotateCcw, HelpCircle } from 'lucide-react'
+import { kstToday } from '@/lib/date'
+import { Trophy, RotateCcw, HelpCircle } from 'lucide-react'
+import Board from './_components/Board'
+import Keyboard from './_components/Keyboard'
+import RulesModal from './_components/RulesModal'
+import GameResultModal, { calcScore } from './_components/GameResultModal'
 
 const MAX_GUESSES = 10
-const SITE_URL = 'https://wordledle-client.vercel.app/'
 const STORAGE_KEY = 'wordledle_daily_v1'
 const RULES_SEEN_KEY = 'wordledle_rules_seen_v1'
 
-// ── 타일/키 색상 ───────────────────────────────────────
-const TILE_COLORS: Record<string, string> = {
-  correct: 'bg-green-500 border-green-500 text-white',
-  present: 'bg-yellow-400 border-yellow-400 text-white',
-  absent:  'bg-gray-500  border-gray-500  text-white',
-  tbd:     'bg-white border-gray-400 text-gray-900',
-  empty:   'bg-white border-gray-200 text-gray-900',
-}
-const KEY_COLORS: Record<string, string> = {
-  correct: 'bg-green-500 text-white',
-  present: 'bg-yellow-400 text-white',
-  absent:  'bg-gray-400  text-white',
-  unused:  'bg-gray-100  text-gray-900',
-}
-const KEY_ROWS = [
-  ['Q','W','E','R','T','Y','U','I','O','P'],
-  ['A','S','D','F','G','H','J','K','L'],
-  ['ENTER','Z','X','C','V','B','N','M','⌫'],
-]
-
 // ── localStorage 헬퍼 ──────────────────────────────────
-function kstToday() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-}
-
 interface SavedState {
   date: string
   word1Guesses: string[]
@@ -62,232 +42,6 @@ function persistState(s: Omit<SavedState, 'date'>) {
 
 function clearSaved() {
   try { localStorage.removeItem(STORAGE_KEY) } catch {}
-}
-
-// ── 점수 계산 ─────────────────────────────────────────
-// 단어당 30점, 게임 종료 후 남은 횟수 × 5점 보너스 (둘 다 성공한 경우만)
-// 못 푼 단어당 -15점 페널티 (시도한 단어에만 적용)
-function calcScore(word1Guesses: string[], word2Guesses: string[], words: [string, string], won: boolean): number {
-  const solved1 = word1Guesses.some(g => g === words[0])
-  const solved2 = word2Guesses.some(g => g === words[1])
-  const wordScore = (solved1 ? 30 : 0) + (solved2 ? 30 : 0)
-  const remaining = MAX_GUESSES - word1Guesses.length - word2Guesses.length
-  const bonus = won ? remaining * 5 : 0
-  let penalty = 0
-  if (!won) {
-    if (!solved1) penalty -= 15
-    if (!solved2 && word2Guesses.length > 0) penalty -= 15
-  }
-  return wordScore + bonus + penalty
-}
-
-// ── 보드 ──────────────────────────────────────────────
-function Board({ word, guesses, currentGuess, totalRows }: {
-  word: string; guesses: string[]; currentGuess: string; totalRows: number
-}) {
-  const solved = guesses.some(g => g === word)
-  const rows: { letters: string[]; state: string[] }[] = []
-
-  guesses.forEach(g => rows.push({ letters: g.split(''), state: evaluateGuess(g, word) }))
-  if (guesses.length < totalRows && !solved)
-    rows.push({ letters: Array(5).fill('').map((_, i) => currentGuess[i] ?? ''), state: Array(5).fill('tbd') })
-  while (rows.length < totalRows)
-    rows.push({ letters: Array(5).fill(''), state: Array(5).fill('empty') })
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      {rows.map((row, ri) => (
-        <div key={ri} className="flex gap-1.5 justify-center">
-          {row.letters.map((letter, ci) => {
-            const state = ri < guesses.length ? row.state[ci] : (row.state[ci] === 'tbd' ? 'tbd' : 'empty')
-            return (
-              <div key={ci} className={cn(
-                'w-12 h-12 border-2 flex items-center justify-center',
-                'text-lg font-black uppercase rounded-lg transition-colors duration-300 font-game',
-                TILE_COLORS[state] ?? TILE_COLORS.empty,
-              )}>{letter}</div>
-            )
-          })}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── 키보드 ────────────────────────────────────────────
-function Keyboard({ keyStates, onKey }: {
-  keyStates: Record<string, 'correct' | 'present' | 'absent' | 'unused'>
-  onKey: (k: string) => void
-}) {
-  return (
-    <div className="flex flex-col gap-0.75 w-full select-none">
-      {KEY_ROWS.map((row, ri) => (
-        <div key={ri} className="flex gap-0.75 w-full">
-          {row.map(key => {
-            const isAction = key === 'ENTER' || key === '⌫'
-            return (
-              <button key={key}
-                onPointerDown={e => { e.preventDefault(); onKey(key) }}
-                className={cn(
-                  'h-14 rounded-lg flex items-center justify-center',
-                  'transition-colors active:opacity-60',
-                  isAction
-                    ? 'flex-[1.5] text-[11px] font-black tracking-tight bg-gray-300 text-gray-800'
-                    : 'flex-1 font-bold text-sm font-game',
-                  !isAction && KEY_COLORS[keyStates[key] ?? 'unused'],
-                )}
-              >{key}</button>
-            )
-          })}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── 규칙 설명 모달 ────────────────────────────────────
-function RulesModal({ onClose }: { onClose: () => void }) {
-  const EXAMPLE = [
-    { letter: 'W', state: 'correct' },
-    { letter: 'E', state: 'absent' },
-    { letter: 'A', state: 'present' },
-    { letter: 'R', state: 'absent' },
-    { letter: 'Y', state: 'absent' },
-  ] as const
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative overflow-y-auto max-h-[90dvh]">
-        <button onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
-          <X size={16} />
-        </button>
-
-        <h2 className="text-xl font-black text-gray-900 mb-1">워들들 규칙</h2>
-        <p className="text-sm text-gray-500 mb-5">오늘의 5글자 영단어 2개를 맞혀보세요</p>
-
-        <ul className="text-sm text-gray-700 space-y-2 mb-5">
-          <li className="flex gap-2"><span className="text-gray-400 shrink-0">①</span>단어 1을 먼저 맞춰야 단어 2로 넘어갑니다.</li>
-          <li className="flex gap-2"><span className="text-gray-400 shrink-0">②</span>두 단어를 합쳐 총 <strong>10번</strong> 안에 맞춰야 합니다.</li>
-          <li className="flex gap-2"><span className="text-gray-400 shrink-0">③</span>기본 10점 + 남은 시도 수만큼 보너스 점수!</li>
-        </ul>
-
-        <div className="mb-4">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">타일 색상 의미</p>
-          <div className="flex gap-1.5 mb-3">
-            {EXAMPLE.map(({ letter, state }) => (
-              <div key={letter} className={cn(
-                'w-10 h-10 border-2 flex items-center justify-center',
-                'text-base font-black uppercase rounded-lg',
-                TILE_COLORS[state],
-              )}>{letter}</div>
-            ))}
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-green-500 shrink-0" />
-              <span className="text-gray-700"><strong>W</strong>: 정확한 위치에 있는 글자</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-yellow-400 shrink-0" />
-              <span className="text-gray-700"><strong>A</strong>: 단어에 있지만 위치가 다른 글자</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded bg-gray-500 shrink-0" />
-              <span className="text-gray-700"><strong>E R Y</strong>: 단어에 없는 글자</span>
-            </div>
-          </div>
-        </div>
-
-        <button onClick={onClose}
-          className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-black active:opacity-80 transition-opacity">
-          게임 시작!
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── 결과 모달 ─────────────────────────────────────────
-function ResultModal({ won, words, word1Guesses, word2Guesses, onClose }: {
-  won: boolean; words: [string, string]
-  word1Guesses: string[]; word2Guesses: string[]; onClose: () => void
-}) {
-  const [copied, setCopied] = useState(false)
-  const solved1 = word1Guesses.some(g => g === words[0])
-  const solved2 = word2Guesses.some(g => g === words[1])
-  const score = calcScore(word1Guesses, word2Guesses, words, won)
-  const total = word1Guesses.length + word2Guesses.length
-
-  function buildShareText() {
-    const date = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
-    const result = won ? `🎉 성공 (${total}/${MAX_GUESSES}회 · ${score}점)` : `💀 실패`
-    const board = (guesses: string[], word: string) =>
-      guesses.map(g => evaluateGuess(g, word).map(s =>
-        s === 'correct' ? '🟩' : s === 'present' ? '🟨' : '⬛').join('')).join('\n')
-    return `워들들 ${date}\n${result}\n\n단어 1\n${board(word1Guesses, words[0])}\n\n단어 2\n${board(word2Guesses, words[1])}\n\n${SITE_URL}`
-  }
-
-  function handleShare() {
-    navigator.clipboard.writeText(buildShareText())
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6 relative">
-        <button onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
-          <X size={16} />
-        </button>
-
-        <div className="text-center mb-5">
-          {won ? (
-            <>
-              <div className="text-4xl mb-2">🎉</div>
-              <p className="text-xl font-black text-gray-900">성공!</p>
-              <p className="text-sm text-gray-500 mt-1">{total}번 사용</p>
-              <div className="mt-2 inline-flex items-center gap-1.5 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-1.5">
-                <span className="text-yellow-600 text-sm font-black">{score}점</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-4xl mb-2">💀</div>
-              <p className="text-xl font-black text-gray-900">아쉬워요</p>
-              <div className="mt-2 inline-flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-xl px-4 py-1.5">
-                <span className="text-red-500 text-sm font-black">{score}점</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-3 mb-5">
-          {words.map((word, i) => {
-            const isSolved = i === 0 ? solved1 : solved2
-            const cnt = i === 0 ? word1Guesses.length : word2Guesses.length
-            return (
-              <div key={i} className={cn(
-                'flex-1 rounded-xl p-3 text-center',
-                isSolved ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200',
-              )}>
-                <p className="text-xs font-bold text-gray-500 mb-1">단어 {i + 1}</p>
-                <p className={cn('text-base font-black uppercase tracking-widest font-game',
-                  isSolved ? 'text-green-700' : 'text-red-500')}>{word}</p>
-                {isSolved && <p className="text-xs text-green-600 mt-0.5">{cnt}번</p>}
-              </div>
-            )
-          })}
-        </div>
-
-        <button onClick={handleShare}
-          className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-black active:opacity-80 transition-opacity">
-          {copied ? '✓ 복사됨!' : '결과 공유'}
-        </button>
-      </div>
-    </div>
-  )
 }
 
 // ── 메인 게임 ─────────────────────────────────────────
@@ -556,7 +310,7 @@ export default function WordledlePage() {
       )}
 
       {showResult && (
-        <ResultModal won={won} words={words}
+        <GameResultModal won={won} words={words}
           word1Guesses={word1Guesses} word2Guesses={word2Guesses}
           onClose={() => setShowResult(false)} />
       )}

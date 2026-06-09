@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { Trophy, ChevronRight, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getGameCurrentPeriodStart } from '@/lib/games'
+import { kstToday, kstYesterday } from '@/lib/date'
 
 interface RankingEntry {
   user: User
@@ -18,13 +19,6 @@ interface RankingEntry {
   gameResults: { game_id: string; completed: boolean }[]
 }
 
-function kstToday() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-}
-
-function kstYesterday() {
-  return new Date(Date.now() - 86400000).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-}
 
 export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
   const { user, loading: authLoading } = useAuth()
@@ -147,7 +141,7 @@ export default function HomeClient({ initialGames }: { initialGames: Game[] }) {
             key={game.id}
             game={game}
             result={currentResults[game.id] ?? null}
-            priority={i < 2}
+            priority={i < 4}
             onResultChange={r => {
               setCurrentResults(prev => ({ ...prev, [r.game_id]: r }))
               setRankingVersion(v => v + 1)
